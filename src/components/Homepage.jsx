@@ -1,388 +1,397 @@
 import { useState, useEffect } from 'react'
-import { ArrowRight, CheckCircle, BarChart3, Tag, Download, Users, Mail, Shield, FileText, Sparkles, Star, Zap, Target, TrendingUp, Globe, Award, Rocket, Sun, Moon } from 'lucide-react'
+import {
+  ArrowRight, BarChart3, Tag, Download, Shield, FileText, Sparkles,
+  Rocket, Sun, Moon, CheckCircle2, TrendingUp, Zap,
+  Mail, ChevronRight, Database, Layout,
+} from 'lucide-react'
 import HuntrLogo from './HuntrLogo'
+import { Button } from './ui/button'
+import { Badge } from './ui/badge'
+import { Card, CardContent } from './ui/card'
+import { Separator } from './ui/separator'
+import { cn } from '@/lib/utils'
 
-function Homepage({ onGetStarted, onAbout }) {
-  const [isVisible, setIsVisible] = useState(false)
-  const [currentFeature, setCurrentFeature] = useState(0)
-  const [isDarkMode, setIsDarkMode] = useState(false)
+const ROLLING_WORDS = ['job', 'internship', 'co-op', 'grad role', 'placement', 'new role', 'opportunity']
 
-  useEffect(() => {
-    setIsVisible(true)
-
-    // Check initial dark mode
-    const isDark = document.documentElement.classList.contains('dark')
-    setIsDarkMode(isDark)
-
-    // Listen for theme changes
-    const observer = new MutationObserver(() => {
-      const isDark = document.documentElement.classList.contains('dark')
-      setIsDarkMode(isDark)
-    })
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class']
-    })
-
-    return () => observer.disconnect()
-  }, [])
+function RollingWord() {
+  const [index, setIndex] = useState(0)
+  const [visible, setVisible] = useState(true)
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentFeature((prev) => (prev + 1) % features.length)
-    }, 3000)
+      setVisible(false)
+      setTimeout(() => {
+        setIndex(i => (i + 1) % ROLLING_WORDS.length)
+        setVisible(true)
+      }, 280)
+    }, 2000)
     return () => clearInterval(interval)
   }, [])
 
-  const features = [
-    {
-      icon: <CheckCircle className="h-8 w-8" />,
-      title: "Smart Application Tracking",
-      description: "Never lose track of your applications with intelligent status management and automated reminders."
-    },
-    {
-      icon: <BarChart3 className="h-8 w-8" />,
-      title: "Advanced Analytics",
-      description: "Visualize your progress with beautiful charts and insights to optimize your application strategy."
-    },
-    {
-      icon: <Tag className="h-8 w-8" />,
-      title: "Smart Organization",
-      description: "Use intelligent tags and filters to categorize and find your applications instantly."
-    },
-    {
-      icon: <Download className="h-8 w-8" />,
-      title: "Export & Share",
-      description: "Export your data in multiple formats and share progress with mentors and advisors."
-    }
-  ]
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        transition: 'opacity 0.28s ease, transform 0.28s ease',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(-10px)',
+        minWidth: '6ch',
+      }}
+    >
+      {ROLLING_WORDS[index]}
+    </span>
+  )
+}
 
-  const stats = [
-    { number: "10K+", label: "Students" },
-    { number: "50K+", label: "Applications" },
-    { number: "95%", label: "Success Rate" },
-    { number: "24/7", label: "Support" }
-  ]
+const FEATURES = [
+  {
+    icon: CheckCircle2,
+    title: 'Application Tracking',
+    description: 'Status pipeline from saved to applied to interviewing to offer. Every state, every update, one place.',
+    tag: 'core',
+  },
+  {
+    icon: BarChart3,
+    title: 'Analytics Dashboard',
+    description: 'Charts and metrics that show exactly where your pipeline stands and where to focus next.',
+    tag: 'insights',
+  },
+  {
+    icon: Tag,
+    title: 'Smart Tags and Filters',
+    description: 'Label roles by tech stack, location, deadline. Slice your pipeline any way you need.',
+    tag: 'organize',
+  },
+  {
+    icon: Zap,
+    title: 'Auto-fill from URL',
+    description: 'Paste a job listing URL. We extract the company, role, and details automatically.',
+    tag: 'auto',
+  },
+  {
+    icon: TrendingUp,
+    title: 'Interview Rounds',
+    description: 'Log every round: OA, phone screen, technical, final. Add notes and outcomes as you go.',
+    tag: 'track',
+  },
+  {
+    icon: Download,
+    title: 'Export and Share',
+    description: 'Export your full application history as CSV or JSON. Your data, always.',
+    tag: 'export',
+  },
+]
 
-  const testimonials = [
-    {
-      quote: "Huntr transformed my internship search. I applied to 50+ companies and landed my dream role at Google!",
-      author: "Sarah Chen",
-      role: "Computer Science Student",
-      company: "Google",
-      avatar: "👩‍💻"
-    },
-    {
-      quote: "The analytics helped me understand my application patterns and improve my success rate significantly.",
-      author: "Michael Rodriguez",
-      role: "Software Engineering Graduate",
-      company: "Microsoft",
-      avatar: "👨‍💻"
-    },
-    {
-      quote: "Finally, a tool that understands what students need during the internship application process.",
-      author: "Emily Johnson",
-      role: "Business Administration Student",
-      company: "Amazon",
-      avatar: "👩‍🎓"
-    }
-  ]
+const STATS = [
+  { value: '10K+', label: 'users' },
+  { value: '50K+', label: 'applications tracked' },
+  { value: '6',    label: 'status stages' },
+  { value: '100%', label: 'free' },
+]
+
+const TESTIMONIALS = [
+  {
+    quote: 'Huntr is the first tracker that actually feels like a dev tool. It just gets out of the way.',
+    author: 'Sarah Chen',
+    role: 'CS at Stanford',
+    co: 'Now at Google',
+  },
+  {
+    quote: 'The analytics tab alone is worth it. I figured out I was ghosting myself on follow-ups.',
+    author: 'Michael Rodriguez',
+    role: 'SWE Graduate',
+    co: 'Now at Microsoft',
+  },
+  {
+    quote: 'Finally something that does not look like it was built in 2012. Clean, fast, does the job.',
+    author: 'Emily Johnson',
+    role: 'Business at Wharton',
+    co: 'Now at Amazon',
+  },
+]
+
+function Homepage({ onGetStarted, onAbout }) {
+  const [isDarkMode, setIsDarkMode] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    const isDark = document.documentElement.classList.contains('dark')
+    setIsDarkMode(isDark)
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'))
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
 
   const toggleDarkMode = () => {
-    const newDarkMode = !isDarkMode
-    setIsDarkMode(newDarkMode)
-    if (newDarkMode) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
+    const next = !isDarkMode
+    setIsDarkMode(next)
+    document.documentElement.classList.toggle('dark', next)
   }
 
   return (
-    <div className={`min-h-screen transition-all duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
-        {/* Animated Background */}
-        <div className="absolute inset-0">
-          <div className="absolute top-0 left-0 w-72 h-72 bg-purple-300 dark:bg-purple-600/30 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-          <div className="absolute top-0 right-0 w-72 h-72 bg-yellow-300 dark:bg-yellow-600/30 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-          <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 dark:bg-pink-600/30 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
-        </div>
+    <div className={cn('min-h-screen bg-background text-foreground transition-opacity duration-500 relative', mounted ? 'opacity-100' : 'opacity-0')}>
+      {/* dotted margin guides matching dashboard width */}
+      <div className="pointer-events-none fixed inset-0 z-50">
+        <div className="max-w-7xl mx-auto h-full margin-lined-dots" />
+      </div>
 
-        {/* Navigation */}
-        <nav className={`relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 transition-all duration-300`}>
-          <div className="flex justify-between items-center">
-            <HuntrLogo size="lg" />
-
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={toggleDarkMode}
-                className="p-3 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl"
-                title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-              >
-                {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </button>
-
-              <button
-                onClick={onAbout}
-                className="px-6 py-3 rounded-xl bg-gray-900/10 dark:bg-white/10 backdrop-blur-sm text-gray-700 dark:text-gray-300 hover:bg-gray-900/20 dark:hover:bg-white/20 transition-all duration-300 font-medium"
-              >
+      {/* Nav */}
+      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex h-14 items-center justify-between">
+            <HuntrLogo size="md" />
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={onAbout} className="text-xs uppercase tracking-wide">
                 About
-              </button>
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleDarkMode} aria-label="Toggle theme">
+                {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
+              <Button size="sm" onClick={onGetStarted} className="text-xs uppercase tracking-wide gap-1.5">
+                Get started
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
             </div>
           </div>
-        </nav>
+        </div>
+      </header>
 
-        {/* Hero Content */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-32">
-          <div className="text-center">
-            <div className="inline-flex items-center space-x-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full px-6 py-3 mb-8 shadow-lg">
-              <Sparkles className="h-5 w-5 text-yellow-500" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Trusted by 10,000+ students worldwide
-              </span>
-            </div>
+      {/* Hero */}
+      <section className="relative border-b border-border">
+        <div
+          className="absolute inset-0 opacity-[0.035] dark:opacity-[0.06] pointer-events-none"
+          style={{
+            backgroundImage:
+              'linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)',
+            backgroundSize: '48px 48px',
+          }}
+        />
 
-            <h1 className="text-6xl md:text-8xl font-bold mb-8">
-              <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Track Your
-              </span>
-              <br />
-              <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
-                Dream Internship
-              </span>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-28 md:py-36">
+          <div className="max-w-3xl">
+            <Badge variant="secondary" className="mb-6 gap-1.5 text-[10px] uppercase tracking-widest font-medium">
+              <Sparkles className="h-3 w-3" />
+              Job application tracker
+            </Badge>
+
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.05] mb-6">
+              Hunt down<br />
+              <span className="text-muted-foreground">your next</span><br />
+              <RollingWord />_
             </h1>
 
-            <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed">
-              The ultimate platform for students to organize, track, and optimize their internship applications.
-              <span className="font-semibold text-gray-800 dark:text-gray-200"> Land your dream role with confidence.</span>
+            <p className="text-base md:text-lg text-muted-foreground max-w-xl mb-10 leading-relaxed">
+              One dashboard for every application, every round, every offer.
+              Built for anyone serious about their search.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-              <button
-                onClick={onGetStarted}
-                className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-2xl text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="relative flex items-center space-x-3">
-                  <span>Get Started Free</span>
-                  <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
-                </div>
-              </button>
-
-              <button className="px-8 py-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm text-gray-700 dark:text-gray-300 font-semibold rounded-2xl text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                Watch Demo
-              </button>
+            <div className="flex flex-wrap gap-3">
+              <Button size="lg" onClick={onGetStarted} className="gap-2 text-sm uppercase tracking-wide">
+                Start tracking free
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              <Button size="lg" variant="outline" onClick={onAbout} className="text-sm uppercase tracking-wide">
+                Learn more
+              </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-20 bg-white dark:bg-gray-900">
+      {/* Stats */}
+      <section className="border-b border-border bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div
-                key={index}
-                className="text-center p-6 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-                  {stat.number}
-                </div>
-                <div className="text-gray-600 dark:text-gray-400 font-medium">
-                  {stat.label}
-                </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-border">
+            {STATS.map((s) => (
+              <div key={s.label} className="px-8 py-10 text-center">
+                <div className="text-3xl md:text-4xl font-bold tracking-tight mb-1">{s.value}</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-widest">{s.label}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-20 bg-gray-50 dark:bg-gray-800">
+      {/* Features */}
+      <section className="py-24 border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
-              Everything you need to
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> succeed</span>
+          <div className="mb-14">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Features</p>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+              Everything in one place_
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              Powerful features designed to streamline your internship application process and maximize your success rate
-            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => (
-              <div
-                key={index}
-                className="group relative p-8 rounded-2xl bg-white dark:bg-gray-700 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border border-gray-200 dark:border-gray-600"
-                style={{ animationDelay: `${index * 150}ms` }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-purple-600/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="relative text-center">
-                  <div className="text-primary-600 mb-6 flex justify-center">
-                    <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
-                      {feature.icon}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-border">
+            {FEATURES.map((f) => {
+              const Icon = f.icon
+              return (
+                <div key={f.title} className="bg-background p-8 group hover:bg-muted/40 transition-colors duration-200">
+                  <div className="flex items-start gap-4">
+                    <div className="mt-0.5 p-2 rounded-md bg-secondary border border-border shrink-0">
+                      <Icon className="h-4 w-4 text-foreground" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-sm font-semibold">{f.title}</h3>
+                        <Badge variant="outline" className="text-[9px] uppercase tracking-widest px-1.5 py-0">{f.tag}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{f.description}</p>
                     </div>
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 text-center">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-center">
-                    {feature.description}
-                  </p>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="py-20 bg-white dark:bg-gray-900">
+      {/* How it works */}
+      <section className="py-24 border-b border-border bg-muted/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
-              What students are
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> saying</span>
+          <div className="mb-14">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Process</p>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+              From search to offer_
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300">
-              Join thousands of students who have transformed their internship search
-            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div
-                key={index}
-                className="group relative p-8 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:scale-105"
-                style={{ animationDelay: `${index * 200}ms` }}
-              >
-                <div className="absolute top-4 right-4">
-                  <div className="flex text-yellow-400">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 fill-current" />
-                    ))}
+            {[
+              {
+                step: '01',
+                icon: Database,
+                title: 'Add your applications',
+                desc: 'Paste a URL or manually add any role. Import from LinkedIn, Greenhouse, or anywhere you find listings.',
+              },
+              {
+                step: '02',
+                icon: Layout,
+                title: 'Track every stage',
+                desc: 'Move applications through your pipeline. Log rounds, notes, deadlines, and contacts along the way.',
+              },
+              {
+                step: '03',
+                icon: TrendingUp,
+                title: 'Optimize and win',
+                desc: 'Use analytics to spot patterns. Focus your energy where it converts. Land the offer.',
+              },
+            ].map((item) => {
+              const Icon = item.icon
+              return (
+                <div key={item.step} className="relative">
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono mb-4">{item.step}</div>
+                  <div className="p-2 rounded-md bg-secondary border border-border inline-flex mb-4">
+                    <Icon className="h-4 w-4" />
                   </div>
+                  <h3 className="font-semibold mb-2">{item.title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
                 </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
 
-                <div className="mb-6">
-                  <p className="text-gray-700 dark:text-gray-300 italic text-lg leading-relaxed">
-                    "{testimonial.quote}"
-                  </p>
-                </div>
+      {/* Testimonials */}
+      <section className="py-24 border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-14">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Social proof</p>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+              People ship with huntr_
+            </h2>
+          </div>
 
-                <div className="flex items-center space-x-4">
-                  <div className="text-3xl">{testimonial.avatar}</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {TESTIMONIALS.map((t) => (
+              <Card key={t.author} className="rounded-md border-border">
+                <CardContent className="p-6">
+                  <p className="text-sm text-foreground leading-relaxed mb-6 italic">"{t.quote}"</p>
+                  <Separator className="mb-4" />
                   <div>
-                    <p className="font-semibold text-gray-900 dark:text-white">{testimonial.author}</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{testimonial.role}</p>
-                    <p className="text-sm text-primary-600 dark:text-primary-400 font-medium">{testimonial.company}</p>
+                    <p className="text-xs font-semibold">{t.author}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">{t.role}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{t.co}</p>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Ready to land your dream internship?
+      {/* CTA */}
+      <section className="py-28 border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-4">Ready?</p>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
+            Start your search_
           </h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Join thousands of students who are already using Huntr to track applications and land amazing opportunities.
+          <p className="text-muted-foreground text-sm mb-10 max-w-md mx-auto leading-relaxed">
+            Free forever. No credit card. A cleaner way to run your job search from first application to signed offer.
           </p>
-          <button
-            onClick={onGetStarted}
-            className="group px-8 py-4 bg-white text-blue-600 font-semibold rounded-2xl text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-          >
-            <div className="flex items-center space-x-3">
-              <span>Start Your Journey</span>
-              <Rocket className="h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
-            </div>
-          </button>
+          <Button size="lg" onClick={onGetStarted} className="gap-2 text-sm uppercase tracking-wide">
+            Get started for free
+            <Rocket className="h-4 w-4" />
+          </Button>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center md:text-left">
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center mb-6 justify-center md:justify-start">
-                <HuntrLogo size="md" variant="light" />
-              </div>
-              <p className="text-gray-300 mb-6 max-w-md mx-auto md:mx-0">
-                Hunt down your dream internship. Track every application, every lead, every offer — all in one place.
+      <footer className="bg-background border-t border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="flex flex-col md:flex-row justify-between gap-8">
+            <div>
+              <HuntrLogo size="sm" className="mb-3" />
+              <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
+                Hunt down your next role. Track every application,<br />every lead, every offer.
               </p>
-              <div className="flex space-x-4 justify-center md:justify-start">
-                <button className="p-3 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 transition-all duration-300">
-                  <Mail className="h-5 w-5" />
-                </button>
-                <button className="p-3 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 transition-all duration-300">
-                  <Globe className="h-5 w-5" />
-                </button>
+            </div>
+            <div className="flex gap-12">
+              <div>
+                <p className="text-[10px] uppercase tracking-widest font-medium mb-3">Navigation</p>
+                <ul className="space-y-2">
+                  {['Dashboard', 'About', 'Privacy Policy', 'Contact'].map((item) => (
+                    <li key={item}>
+                      <button
+                        onClick={item === 'About' ? onAbout : undefined}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {item}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest font-medium mb-3">Legal</p>
+                <ul className="space-y-2">
+                  {[
+                    { label: 'Privacy Policy', icon: Shield },
+                    { label: 'Terms of Service', icon: FileText },
+                  ].map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <li key={item.label}>
+                        <button className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5">
+                          <Icon className="h-3 w-3" />
+                          {item.label}
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
               </div>
             </div>
-
-            <div className="text-center md:text-left">
-              <h4 className="text-lg font-semibold mb-6">Navigation</h4>
-              <ul className="space-y-3">
-                <li>
-                  <button className="text-gray-300 hover:text-white transition-colors">
-                    Dashboard
-                  </button>
-                </li>
-                <li>
-                  <button
-                    onClick={onAbout}
-                    className="text-gray-300 hover:text-white transition-colors"
-                  >
-                    About
-                  </button>
-                </li>
-                <li>
-                  <button className="text-gray-300 hover:text-white transition-colors">
-                    Privacy Policy
-                  </button>
-                </li>
-                <li>
-                  <button className="text-gray-300 hover:text-white transition-colors">
-                    Contact
-                  </button>
-                </li>
-              </ul>
-            </div>
-
-            <div className="text-center md:text-left">
-              <h4 className="text-lg font-semibold mb-6">Legal</h4>
-              <ul className="space-y-3">
-                <li>
-                  <button className="text-gray-300 hover:text-white transition-colors flex items-center space-x-2 justify-center md:justify-start">
-                    <Shield className="h-4 w-4" />
-                    <span>Privacy Policy</span>
-                  </button>
-                </li>
-                <li>
-                  <button className="text-gray-300 hover:text-white transition-colors flex items-center space-x-2 justify-center md:justify-start">
-                    <FileText className="h-4 w-4" />
-                    <span>Terms of Service</span>
-                  </button>
-                </li>
-              </ul>
-            </div>
           </div>
-
-          <div className="border-t border-gray-700 mt-12 pt-8 text-center">
-            <p className="text-gray-400">
-              © 2024 All rights reserved.
-            </p>
-          </div>
+          <Separator className="mt-10 mb-6" />
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+            © {new Date().getFullYear()} huntr_ · all rights reserved
+          </p>
         </div>
       </footer>
     </div>

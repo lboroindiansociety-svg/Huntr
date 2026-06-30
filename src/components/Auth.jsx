@@ -1,8 +1,24 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { Mail, Lock, User, Building, ArrowLeft, Sparkles, Eye, EyeOff, Shield, CheckCircle, AlertCircle, Sun, Moon } from 'lucide-react'
-import { ButtonLoader } from './Loader'
+import {
+  Mail, Lock, User, ArrowLeft, Eye, EyeOff, Sun, Moon,
+  CheckCircle2, AlertCircle, ChevronRight, BarChart3, Tag,
+  TrendingUp, Shield,
+} from 'lucide-react'
 import HuntrLogo from './HuntrLogo'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { Separator } from './ui/separator'
+import { cn } from '@/lib/utils'
+
+const SIDE_FEATURES = [
+  { icon: CheckCircle2, text: 'Full application pipeline tracking' },
+  { icon: BarChart3,    text: 'Analytics & success metrics' },
+  { icon: Tag,          text: 'Tags, filters, and smart search' },
+  { icon: TrendingUp,   text: 'Interview round logging' },
+  { icon: Shield,       text: 'Secure — your data, always' },
+]
 
 function Auth() {
   const [isLogin, setIsLogin] = useState(true)
@@ -11,261 +27,266 @@ function Auth() {
   const [username, setUsername] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [isSuccess, setIsSuccess] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [isVisible, setIsVisible] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setIsVisible(true)
-
-    // Check initial dark mode
+    setMounted(true)
     const isDark = document.documentElement.classList.contains('dark')
     setIsDarkMode(isDark)
-
-    // Listen for theme changes
     const observer = new MutationObserver(() => {
-      const isDark = document.documentElement.classList.contains('dark')
-      setIsDarkMode(isDark)
+      setIsDarkMode(document.documentElement.classList.contains('dark'))
     })
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class']
-    })
-
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
     return () => observer.disconnect()
   }, [])
+
+  const toggleDarkMode = () => {
+    const next = !isDarkMode
+    setIsDarkMode(next)
+    document.documentElement.classList.toggle('dark', next)
+  }
 
   const handleAuth = async (e) => {
     e.preventDefault()
     setLoading(true)
     setMessage('')
+    setIsSuccess(false)
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
+        const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
       } else {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: {
-            data: {
-              display_name: username
-            }
-          }
+          options: { data: { display_name: username } },
         })
         if (error) throw error
-        setMessage('Check your email for the confirmation link!')
+        setIsSuccess(true)
+        setMessage('Check your email for the confirmation link.')
       }
-    } catch (error) {
-      setMessage(error.message)
+    } catch (err) {
+      setIsSuccess(false)
+      setMessage(err.message)
     } finally {
       setLoading(false)
     }
   }
 
-  const toggleDarkMode = () => {
-    const newDarkMode = !isDarkMode
-    setIsDarkMode(newDarkMode)
-    if (newDarkMode) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
+  const switchMode = () => {
+    setIsLogin((v) => !v)
+    setMessage('')
+    setIsSuccess(false)
   }
 
   return (
-    <div className={`h-screen overflow-hidden transition-all duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
-      {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20">
-        {/* Removed blob animations */}
-      </div>
+    <div
+      className={cn(
+        'min-h-screen bg-background text-foreground flex transition-opacity duration-500',
+        mounted ? 'opacity-100' : 'opacity-0'
+      )}
+    >
+      {/* ── Left panel ──────────────────────────────────────────────── */}
+      <div className="hidden lg:flex flex-col w-[420px] shrink-0 border-r border-border bg-muted/30 p-10 relative overflow-hidden">
+        {/* grid bg */}
+        <div
+          className="absolute inset-0 opacity-[0.04] dark:opacity-[0.07] pointer-events-none"
+          style={{
+            backgroundImage:
+              'linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)',
+            backgroundSize: '40px 40px',
+          }}
+        />
 
-      {/* Navigation */}
-      <div className="relative z-50 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-        <div className="flex justify-between items-center">
-          <button
-            onClick={() => window.location.href = '/'}
-            className="group flex items-center space-x-2 px-4 py-2 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl"
-          >
-            <ArrowLeft className="h-5 w-5 group-hover:-translate-x-1 transition-transform duration-300" />
-            <span className="font-medium">Back to Home</span>
-          </button>
+        <div className="relative flex flex-col h-full">
+          <HuntrLogo size="md" className="mb-auto" />
 
-          <button
-            onClick={toggleDarkMode}
-            className="p-3 rounded-xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl"
-            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </button>
+          <div className="my-auto">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-4">What you get</p>
+            <h2 className="text-2xl font-bold tracking-tight mb-8 leading-tight">
+              Hunt smarter.<br />Track everything_
+            </h2>
+            <ul className="space-y-4">
+              {SIDE_FEATURES.map(({ icon: Icon, text }) => (
+                <li key={text} className="flex items-center gap-3">
+                  <div className="p-1.5 rounded border border-border bg-secondary shrink-0">
+                    <Icon className="h-3.5 w-3.5 text-foreground" />
+                  </div>
+                  <span className="text-xs text-muted-foreground">{text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-auto">
+            Free forever · No card required
+          </p>
         </div>
       </div>
 
-      {/* Auth Form */}
-      <div className="relative z-10 h-full flex items-center justify-center px-4 sm:px-6 lg:px-8 -mt-28">
-        <div className="max-w-md w-full">
-          {/* Header */}
-          <div className="text-center mb-6">
-            <div className="mb-4 flex justify-center">
-              <HuntrLogo size="xl" />
-            </div>
-            <div className="inline-flex items-center space-x-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg">
-              <Sparkles className="h-4 w-4 text-yellow-500" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {isLogin ? 'Welcome back!' : 'Join our community'}
-              </span>
+      {/* ── Right panel ─────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col min-h-screen">
+        {/* top bar */}
+        <header className="border-b border-border">
+          <div className="max-w-lg mx-auto px-6 py-3 flex items-center justify-between">
+            <button
+              onClick={() => window.location.href = '/'}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors uppercase tracking-wide"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back
+            </button>
+            <div className="flex items-center gap-2">
+              {/* mobile logo */}
+              <HuntrLogo size="sm" className="lg:hidden" />
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={toggleDarkMode} aria-label="Toggle theme">
+                {isDarkMode ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+              </Button>
             </div>
           </div>
+        </header>
 
-          {/* Form Card */}
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl blur opacity-20"></div>
-            <div className="relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-3xl p-6 shadow-2xl border border-white/20 dark:border-gray-700/20">
-              <form className="space-y-4" onSubmit={handleAuth}>
-                {!isLogin && (
-                  <div>
-                    <label htmlFor="username" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      Username
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <input
-                        id="username"
-                        name="username"
-                        type="text"
-                        autoComplete="username"
-                        required={!isLogin}
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                        placeholder="Enter your username"
-                      />
-                    </div>
-                  </div>
-                )}
+        {/* form area */}
+        <div className="flex-1 flex items-center justify-center px-6 py-12">
+          <div className="w-full max-w-sm">
 
-                <div>
-                  <label htmlFor="email" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Email address
-                  </label>
+            {/* heading */}
+            <div className="mb-8">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
+                {isLogin ? '// sign_in' : '// create_account'}
+              </p>
+              <h1 className="text-2xl font-bold tracking-tight">
+                {isLogin ? 'Welcome back_' : 'Get started_'}
+              </h1>
+              <p className="text-xs text-muted-foreground mt-2">
+                {isLogin
+                  ? 'Sign in to continue tracking your applications.'
+                  : 'Create a free account and start your hunt.'}
+              </p>
+            </div>
+
+            {/* form */}
+            <form onSubmit={handleAuth} className="space-y-4">
+              {!isLogin && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="username">Username</Label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Mail className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      autoComplete="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-4 py-3 pl-12 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      placeholder="Enter your email"
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                    <Input
+                      id="username"
+                      type="text"
+                      autoComplete="username"
+                      required={!isLogin}
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="your_username"
+                      className="pl-9 text-sm font-mono"
                     />
                   </div>
                 </div>
+              )}
 
-                <div>
-                  <label htmlFor="password" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Lock className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      id="password"
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete="current-password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-4 py-3 pl-12 pr-12 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      placeholder="Enter your password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="pl-9 text-sm font-mono"
+                  />
                 </div>
+              </div>
 
-                {message && (
-                  <div className={`flex items-center space-x-2 p-3 rounded-xl text-sm ${
-                    message.includes('error') || message.includes('Error') || message.includes('Invalid') || message.includes('invalid')
-                      ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
-                      : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
-                  }`}>
-                    {message.includes('error') || message.includes('Error') || message.includes('Invalid') || message.includes('invalid') ? (
-                      <AlertCircle className="h-5 w-5 flex-shrink-0" />
-                    ) : (
-                      <CheckCircle className="h-5 w-5 flex-shrink-0" />
-                    )}
-                    <span>{message}</span>
-                  </div>
-                )}
-
-                <div>
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete={isLogin ? 'current-password' : 'new-password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="pl-9 pr-9 text-sm font-mono"
+                  />
                   <button
-                    type="submit"
-                    disabled={loading}
-                    className="group w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    tabIndex={-1}
                   >
-                    {loading ? (
-                      <ButtonLoader size="sm" />
-                    ) : (
-                      <div className="flex items-center justify-center space-x-3">
-                        <Shield className="h-5 w-5" />
-                        <span>{isLogin ? 'Sign In' : 'Create Account'}</span>
-                      </div>
-                    )}
+                    {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                   </button>
                 </div>
-              </form>
+              </div>
 
-              <div className="mt-6 text-center">
-                <button
-                  onClick={() => setIsLogin(!isLogin)}
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors duration-200"
+              {message && (
+                <div
+                  className={cn(
+                    'flex items-start gap-2.5 p-3 rounded-md border text-xs',
+                    isSuccess
+                      ? 'bg-secondary border-border text-foreground'
+                      : 'bg-destructive/10 border-destructive/30 text-destructive'
+                  )}
                 >
-                  {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
-                </button>
-              </div>
-            </div>
-          </div>
+                  {isSuccess
+                    ? <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    : <AlertCircle   className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  }
+                  <span>{message}</span>
+                </div>
+              )}
 
-          {/* Features */}
-          <div className="mt-6 grid grid-cols-3 gap-3">
-            <div className="text-center p-3 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
-              <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center mx-auto mb-1">
-                <Shield className="h-3 w-3 text-white" />
-              </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400">Secure</p>
-            </div>
-            <div className="text-center p-3 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
-              <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center mx-auto mb-1">
-                <CheckCircle className="h-3 w-3 text-white" />
-              </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400">Reliable</p>
-            </div>
-            <div className="text-center p-3 rounded-xl bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
-              <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mx-auto mb-1">
-                <Sparkles className="h-3 w-3 text-white" />
-              </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400">Fast</p>
-            </div>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full gap-2 text-xs uppercase tracking-wide mt-2"
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    {isLogin ? 'Signing in…' : 'Creating account…'}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5">
+                    {isLogin ? 'Sign in' : 'Create account'}
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </span>
+                )}
+              </Button>
+            </form>
+
+            <Separator className="my-6" />
+
+            <p className="text-center text-xs text-muted-foreground">
+              {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
+              <button
+                onClick={switchMode}
+                className="text-foreground font-medium hover:underline underline-offset-2 transition-colors"
+              >
+                {isLogin ? 'Sign up' : 'Sign in'}
+              </button>
+            </p>
           </div>
+        </div>
+
+        {/* bottom */}
+        <div className="border-t border-border px-6 py-3">
+          <p className="text-center text-[10px] text-muted-foreground uppercase tracking-widest">
+            huntr_ · secure · free
+          </p>
         </div>
       </div>
     </div>
