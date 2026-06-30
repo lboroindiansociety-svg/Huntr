@@ -1,10 +1,11 @@
 import {
   Briefcase, Target, Users, Award, XCircle, Bookmark,
   Clock, AlertTriangle, TrendingUp, Zap, MapPin, Calendar,
-  Activity, MessageSquare,
+  Activity, MessageSquare, Plus, Link,
 } from 'lucide-react'
 import { Card, CardContent } from './ui/card'
 import { Badge } from './ui/badge'
+import { Button } from './ui/button'
 import { cn } from '@/lib/utils'
 import CompanyLogo from './CompanyLogo'
 
@@ -98,24 +99,38 @@ function StatCell({ label, value, sub, alert, icon: Icon }) {
   )
 }
 
-function Analytics({ internships }) {
+function Analytics({ internships, onAdd, onImport }) {
   if (internships.length === 0) {
     return (
-      <Card>
-        <CardContent className="p-4 sm:p-5">
-          <div className="flex items-center gap-3 py-6">
-            <div className="h-10 w-10 rounded-md border border-border bg-muted flex items-center justify-center shrink-0">
-              <Briefcase className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="font-semibold">No targets in scope</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Import from a job link or add your first application to unlock pipeline intel.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div
+        className="py-24 flex flex-col items-center justify-center gap-5 text-center border border-dashed border-border rounded-md"
+        style={{
+          backgroundImage: 'repeating-linear-gradient(180deg, hsl(var(--border)) 0px, hsl(var(--border)) 6px, transparent 6px, transparent 28px)',
+          backgroundSize: '1.25px 28px',
+          backgroundPosition: 'left center, right center',
+          backgroundRepeat: 'repeat-y',
+        }}
+      >
+        <div className="h-12 w-12 rounded-md border border-border bg-muted flex items-center justify-center shrink-0">
+          <Briefcase className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <div>
+          <p className="font-semibold text-sm">No targets in scope</p>
+          <p className="text-xs text-muted-foreground mt-0.5 max-w-xs">
+            Import from a job link or add your first application to unlock pipeline intel.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={onAdd} className="gap-1.5 text-xs uppercase tracking-wide">
+            <Plus className="h-3.5 w-3.5" />
+            Add application
+          </Button>
+          <Button size="sm" variant="outline" onClick={onImport} className="gap-1.5 text-xs uppercase tracking-wide">
+            <Link className="h-3.5 w-3.5" />
+            Import from URL
+          </Button>
+        </div>
+      </div>
     )
   }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Edit, Trash2, Calendar, MapPin, Building, Tag, Clock, FileText, Download, DollarSign, CheckCheck, AlertTriangle, ExternalLink } from 'lucide-react'
+import { Edit, Trash2, Calendar, MapPin, Building, Tag, Clock, FileText, Download, DollarSign, CheckCheck, AlertTriangle, ExternalLink, Plus, Link } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import EditInternshipModal from './EditInternshipModal'
 import CompanyLogo from './CompanyLogo'
@@ -53,6 +53,7 @@ function hasMetaDetails(internship) {
 function InternshipList({
   internships, onUpdate, onDelete, onMarkAsApplied, dragMode = false,
   onAddRound, onUpdateRound, onDeleteRound, onMoveRound, onAddTemplate, roundSaving,
+  onAdd, onImport,
 }) {
   const [editingInternship, setEditingInternship] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
@@ -69,17 +70,33 @@ function InternshipList({
 
   if (internships.length === 0) {
     return (
-      <Card className="py-16 text-center">
-        <CardContent className="pt-0 flex flex-col items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center">
-            <Building className="h-7 w-7 text-muted-foreground" />
-          </div>
-          <div>
-            <p className="font-semibold">No applications here yet</p>
-            <p className="text-sm text-muted-foreground mt-1">Try adjusting your filters or add a new application.</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div
+        className="py-20 flex flex-col items-center justify-center gap-5 text-center border border-dashed border-border rounded-md"
+        style={{
+          backgroundImage: 'repeating-linear-gradient(180deg, hsl(var(--border)) 0px, hsl(var(--border)) 6px, transparent 6px, transparent 28px)',
+          backgroundSize: '1.25px 28px',
+          backgroundPosition: 'left center, right center',
+          backgroundRepeat: 'repeat-y',
+        }}
+      >
+        <div className="w-12 h-12 rounded-md border border-border bg-muted flex items-center justify-center">
+          <Building className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <div>
+          <p className="font-semibold text-sm">No applications here yet</p>
+          <p className="text-xs text-muted-foreground mt-1 max-w-xs">Try adjusting your filters or add a new application.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={onAdd} className="gap-1.5 text-xs uppercase tracking-wide">
+            <Plus className="h-3.5 w-3.5" />
+            Add application
+          </Button>
+          <Button size="sm" variant="outline" onClick={onImport} className="gap-1.5 text-xs uppercase tracking-wide">
+            <Link className="h-3.5 w-3.5" />
+            Import from URL
+          </Button>
+        </div>
+      </div>
     )
   }
 

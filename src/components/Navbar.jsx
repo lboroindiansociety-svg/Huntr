@@ -48,14 +48,38 @@ function Navbar({ user }) {
 
   return (
     <>
-      <header
-        className={cn(
-          'sticky top-0 z-40 w-full border-b border-border transition-all duration-300',
+      <div className="sticky top-0 z-40 w-full">
+        {/* Status bar */}
+        <div className={cn(
+          'border-b border-border transition-all duration-300',
           isScrolled
-            ? 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm'
+            ? 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'
             : 'bg-transparent'
-        )}
-      >
+        )}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex h-7 items-center justify-between">
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">
+                v1.0 #{__GIT_COMMIT__}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                </span>
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">online</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <header
+          className={cn(
+            'w-full border-b border-border transition-all duration-300',
+            isScrolled
+              ? 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm'
+              : 'bg-transparent'
+          )}
+        >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
@@ -120,7 +144,8 @@ function Navbar({ user }) {
             </div>
           </div>
         </div>
-      </header>
+        </header>
+      </div>
 
       {showSettings && (
         <SettingsModal user={user} onClose={() => setShowSettings(false)} />
