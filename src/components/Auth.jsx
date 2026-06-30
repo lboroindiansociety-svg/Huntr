@@ -151,18 +151,18 @@ function Auth() {
         </header>
 
         {/* form area */}
-        <div className="flex-1 flex items-center justify-center px-6 py-12">
-          <div className="w-full max-w-sm">
+        <div className="flex-1 flex items-center justify-center px-8 py-16">
+          <div className="w-full max-w-md">
 
             {/* heading */}
-            <div className="mb-8">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
+            <div className="mb-10">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">
                 {isLogin ? '// sign_in' : '// create_account'}
               </p>
-              <h1 className="text-2xl font-bold tracking-tight">
+              <h1 className="text-3xl font-bold tracking-tight">
                 {isLogin ? 'Welcome back_' : 'Get started_'}
               </h1>
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-sm text-muted-foreground mt-3">
                 {isLogin
                   ? 'Sign in to continue tracking your applications.'
                   : 'Create a free account and start your hunt.'}
@@ -170,12 +170,12 @@ function Auth() {
             </div>
 
             {/* form */}
-            <form onSubmit={handleAuth} className="space-y-4">
+            <form onSubmit={handleAuth} className="space-y-5">
               {!isLogin && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="username">Username</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="username" className="text-xs">Username</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                     <Input
                       id="username"
                       type="text"
@@ -184,16 +184,16 @@ function Auth() {
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder="your_username"
-                      className="pl-9 text-sm font-mono"
+                      className="pl-10 h-11 text-sm font-mono"
                     />
                   </div>
                 </div>
               )}
 
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-xs">Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <Input
                     id="email"
                     type="email"
@@ -202,15 +202,15 @@ function Auth() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="pl-9 text-sm font-mono"
+                    className="pl-10 h-11 text-sm font-mono"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Password</Label>
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-xs">Password</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
@@ -219,15 +219,15 @@ function Auth() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="pl-9 pr-9 text-sm font-mono"
+                    className="pl-10 pr-10 h-11 text-sm font-mono"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     tabIndex={-1}
                   >
-                    {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
@@ -235,15 +235,15 @@ function Auth() {
               {message && (
                 <div
                   className={cn(
-                    'flex items-start gap-2.5 p-3 rounded-md border text-xs',
+                    'flex items-start gap-3 p-4 rounded-md border text-sm',
                     isSuccess
                       ? 'bg-secondary border-border text-foreground'
                       : 'bg-destructive/10 border-destructive/30 text-destructive'
                   )}
                 >
                   {isSuccess
-                    ? <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                    : <AlertCircle   className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
+                    : <AlertCircle  className="h-4 w-4 mt-0.5 shrink-0" />
                   }
                   <span>{message}</span>
                 </div>
@@ -251,26 +251,27 @@ function Auth() {
 
               <Button
                 type="submit"
+                size="lg"
                 disabled={loading}
-                className="w-full gap-2 text-xs uppercase tracking-wide mt-2"
+                className="w-full gap-2 text-sm uppercase tracking-wide mt-1"
               >
                 {loading ? (
                   <span className="flex items-center gap-2">
-                    <span className="h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    {isLogin ? 'Signing in…' : 'Creating account…'}
+                    <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    {isLogin ? 'Signing in...' : 'Creating account...'}
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-2">
                     {isLogin ? 'Sign in' : 'Create account'}
-                    <ChevronRight className="h-3.5 w-3.5" />
+                    <ChevronRight className="h-4 w-4" />
                   </span>
                 )}
               </Button>
             </form>
 
-            <Separator className="my-6" />
+            <Separator className="my-8" />
 
-            <p className="text-center text-xs text-muted-foreground">
+            <p className="text-center text-sm text-muted-foreground">
               {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
               <button
                 onClick={switchMode}
