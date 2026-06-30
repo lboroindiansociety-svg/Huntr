@@ -114,6 +114,133 @@ BEGIN
   END IF;
 END $$;`
 
+  const trackrMigrationSQL = `-- Trackr Discover: programme cache + dedup column
+-- Run this if you use the Discover tab to browse Trackr listings
+
+CREATE TABLE IF NOT EXISTS trackr_programmes (
+  trackr_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  company_id TEXT,
+  company_name TEXT NOT NULL,
+  company_domain TEXT,
+  job_url TEXT,
+  careers_site TEXT,
+  region TEXT NOT NULL,
+  industry TEXT NOT NULL,
+  season TEXT NOT NULL,
+  programme_type TEXT NOT NULL DEFAULT 'graduate-programmes',
+  categories TEXT[] DEFAULT '{}',
+  opening_date TIMESTAMPTZ,
+  closing_date TIMESTAMPTZ,
+  last_year_opening TIMESTAMPTZ,
+  cv_required BOOLEAN,
+  cover_letter TEXT,
+  written_answers TEXT,
+  sponsors_visa TEXT,
+  raw JSONB,
+  synced_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_trackr_programmes_filters
+  ON trackr_programmes (region, industry, season, programme_type);
+
+CREATE TABLE IF NOT EXISTS trackr_sync_meta (
+  id TEXT PRIMARY KEY DEFAULT 'default',
+  region TEXT,
+  industry TEXT,
+  season TEXT,
+  programme_type TEXT,
+  last_synced_at TIMESTAMPTZ,
+  programme_count INTEGER
+);
+
+INSERT INTO trackr_sync_meta (id) VALUES ('default')
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE trackr_programmes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE trackr_sync_meta ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'trackr_programmes' AND policyname = 'Authenticated users can read trackr programmes'
+  ) THEN
+    CREATE POLICY "Authenticated users can read trackr programmes" ON trackr_programmes
+      FOR SELECT USING (auth.role() = 'authenticated');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'trackr_sync_meta' AND policyname = 'Authenticated users can read trackr sync meta'
+  ) THEN
+    CREATE POLICY "Authenticated users can read trackr sync meta" ON trackr_sync_meta
+      FOR SELECT USING (auth.role() = 'authenticated');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'internships' AND column_name = 'trackr_id'
+  ) THEN
+    ALTER TABLE internships ADD COLUMN trackr_id TEXT;
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_internships_trackr_id ON internships (trackr_id)
+  WHERE trackr_id IS NOT NULL;`
+
+  const discoverRolesMigrationSQL = `-- Live roles cache (Adzuna + Reed)
+-- Run after Trackr migration if using Discover live roles
+
+CREATE TABLE IF NOT EXISTS discover_roles (
+  external_id TEXT NOT NULL,
+  source TEXT NOT NULL CHECK (source IN ('adzuna', 'reed')),
+  company_name TEXT NOT NULL,
+  company_domain TEXT,
+  role TEXT NOT NULL,
+  job_url TEXT NOT NULL,
+  location TEXT,
+  salary TEXT,
+  description TEXT,
+  posted_at TIMESTAMPTZ,
+  search_query TEXT,
+  synced_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (source, external_id)
+);
+
+CREATE TABLE IF NOT EXISTS discover_roles_sync_meta (
+  source TEXT PRIMARY KEY CHECK (source IN ('adzuna', 'reed')),
+  last_synced_at TIMESTAMPTZ,
+  role_count INTEGER
+);
+
+ALTER TABLE discover_roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE discover_roles_sync_meta ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'discover_roles' AND policyname = 'Authenticated users can read discover roles'
+  ) THEN
+    CREATE POLICY "Authenticated users can read discover roles" ON discover_roles
+      FOR SELECT USING (auth.role() = 'authenticated');
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'discover_roles_sync_meta' AND policyname = 'Authenticated users can read discover roles sync meta'
+  ) THEN
+    CREATE POLICY "Authenticated users can read discover roles sync meta" ON discover_roles_sync_meta
+      FOR SELECT USING (auth.role() = 'authenticated');
+  END IF;
+END $$;`
+
   const storageSetup = `-- Storage Setup Instructions:
 -- 1. Go to your Supabase Dashboard > Storage
 -- 2. Create a new bucket called "internship-files" (if not exists)
@@ -253,6 +380,72 @@ FOR ALL USING (auth.role() = 'authenticated');`
                 value={migrationSQL}
                 readOnly
                 className="w-full h-32 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg font-mono text-xs text-gray-900 dark:text-gray-100 resize-none"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Trackr Discover Migration (for browsing programme listings)
+                </label>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(trackrMigrationSQL)
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 2000)
+                  }}
+                  className="flex items-center space-x-1 text-sm text-primary-600 hover:text-primary-700 transition-colors"
+                >
+                  {copied ? (
+                    <>
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <textarea
+                value={trackrMigrationSQL}
+                readOnly
+                className="w-full h-48 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg font-mono text-xs text-gray-900 dark:text-gray-100 resize-none"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Live Roles Migration (Adzuna + Reed discover section)
+                </label>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(discoverRolesMigrationSQL)
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 2000)
+                  }}
+                  className="flex items-center space-x-1 text-sm text-primary-600 hover:text-primary-700 transition-colors"
+                >
+                  {copied ? (
+                    <>
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <textarea
+                value={discoverRolesMigrationSQL}
+                readOnly
+                className="w-full h-40 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg font-mono text-xs text-gray-900 dark:text-gray-100 resize-none"
               />
             </div>
 

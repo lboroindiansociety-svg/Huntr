@@ -13,5 +13,8 @@ export function sanitizeInternshipData(data) {
   if ('job_url' in sanitized && !sanitized.job_url) {
     sanitized.job_url = null
   }
+  if ('trackr_id' in sanitized && !sanitized.trackr_id) {
+    sanitized.trackr_id = null
+  }
   return sanitized
 }

@@ -222,53 +222,54 @@ function InternshipList({
                   <Separator />
 
                   {/* Actions */}
-                  <div className="flex items-center justify-between gap-2">
-                    {internship.job_url ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-muted-foreground hover:text-foreground gap-1.5 min-w-0 max-w-[50%]"
-                        asChild
-                      >
-                        <a
-                          href={internship.job_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                  <div className="flex items-center justify-between gap-2 pt-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {internship.job_url && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          asChild
                         >
-                          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-                          <span className="truncate">View posting</span>
-                        </a>
-                      </Button>
-                    ) : (
-                      <span />
-                    )}
-                    <div className="flex items-center gap-1 shrink-0">
-                    {internship.status === 'saved' && onMarkAsApplied && (
+                          <a
+                            href={internship.job_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            View posting
+                          </a>
+                        </Button>
+                      )}
+                      {internship.status === 'saved' && onMarkAsApplied && (
+                        <Button
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => onMarkAsApplied(internship.id)}
+                        >
+                          <CheckCheck className="h-3.5 w-3.5" />
+                          Apply
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
                       <Button
-                        variant="ghost" size="sm"
-                        className="h-8 text-muted-foreground hover:text-emerald-600 gap-1.5"
-                        onClick={() => onMarkAsApplied(internship.id)}
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => setEditingInternship(internship)}
                       >
-                        <CheckCheck className="h-3.5 w-3.5" />
-                        Apply
+                        <Edit className="h-3.5 w-3.5" />
+                        Edit
                       </Button>
-                    )}
-                    <Button
-                      variant="ghost" size="sm"
-                      className="h-8 text-muted-foreground hover:text-foreground gap-1.5"
-                      onClick={() => setEditingInternship(internship)}
-                    >
-                      <Edit className="h-3.5 w-3.5" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost" size="sm"
-                      className="h-8 text-muted-foreground hover:text-destructive gap-1.5"
-                      onClick={() => setDeleteConfirm(internship)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Delete
-                    </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 text-destructive hover:text-destructive"
+                        onClick={() => setDeleteConfirm(internship)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
+                      </Button>
                     </div>
                   </div>
                   </div>

@@ -11,6 +11,8 @@ import DatabaseSetup from './DatabaseSetup'
 import Toast from './Toast'
 import Pagination from './Pagination'
 import ImportJobLinkModal from './ImportJobLinkModal'
+import TrackrDiscover from './TrackrDiscover'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Badge } from './ui/badge'
@@ -134,6 +136,8 @@ function Dashboard({ user }) {
   const [showAddModal, setShowAddModal] = useState(false)
   const [addModalInitialData, setAddModalInitialData] = useState(null)
   const [showSaveModal, setShowSaveModal] = useState(false)
+  const [saveModalInitialData, setSaveModalInitialData] = useState(null)
+  const [dashboardView, setDashboardView] = useState('applications')
   const [showDatabaseSetup, setShowDatabaseSetup] = useState(false)
   const [showExport, setShowExport] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -542,6 +546,13 @@ function Dashboard({ user }) {
       <Separator className="w-full" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-6 space-y-6">
+      <Tabs value={dashboardView} onValueChange={setDashboardView}>
+        <TabsList>
+          <TabsTrigger value="applications">My Applications</TabsTrigger>
+          <TabsTrigger value="discover">Discover</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="applications" className="space-y-6 mt-6">
       {/* Header Row */}
       <div>
         <h2 className="text-xl font-semibold">Applications</h2>
@@ -593,7 +604,7 @@ function Dashboard({ user }) {
               {seedingTestData ? 'Seeding…' : 'Test data'}
             </Button>
           )}
-          <Button size="sm" variant="outline" onClick={() => setShowSaveModal(true)} className="gap-1.5">
+          <Button size="sm" variant="outline" onClick={() => { setSaveModalInitialData(null); setShowSaveModal(true) }} className="gap-1.5">
             <Bookmark className="h-3.5 w-3.5" />
             Save
           </Button>
@@ -807,6 +818,20 @@ function Dashboard({ user }) {
         />
       )}
 
+        </TabsContent>
+
+        <TabsContent value="discover" className="mt-6">
+          <TrackrDiscover
+            internships={internships}
+            onSaveProgramme={(data) => {
+              setSaveModalInitialData(data)
+              setShowSaveModal(true)
+            }}
+            onError={(message, type = 'error') => showToast(message, type)}
+          />
+        </TabsContent>
+      </Tabs>
+
       {/* Modals */}
       <ImportJobLinkModal
         open={showImportModal}
@@ -824,7 +849,11 @@ function Dashboard({ user }) {
         />
       )}
       {showSaveModal && (
-        <SaveInternshipModal onClose={() => setShowSaveModal(false)} onSave={saveInternship} />
+        <SaveInternshipModal
+          initialData={saveModalInitialData}
+          onClose={() => { setShowSaveModal(false); setSaveModalInitialData(null) }}
+          onSave={saveInternship}
+        />
       )}
       {showExport && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">

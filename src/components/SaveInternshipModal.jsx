@@ -9,7 +9,7 @@ import { Input } from './ui/input'
 import { DatePicker } from './ui/date-picker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 
-function SaveInternshipModal({ onClose, onSave }) {
+function SaveInternshipModal({ onClose, onSave, initialData }) {
   const [formData, setFormData] = useState({
     company_name: '',
     company_domain: '',
@@ -22,9 +22,20 @@ function SaveInternshipModal({ onClose, onSave }) {
     job_url: '',
     priority: 'medium',
     tags: [],
+    trackr_id: '',
   })
   const [loading, setLoading] = useState(false)
   const [availableTags, setAvailableTags] = useState([])
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData(prev => ({
+        ...prev,
+        ...initialData,
+        tags: initialData.tags || prev.tags,
+      }))
+    }
+  }, [initialData])
 
   useEffect(() => {
     const fetch = async () => {
