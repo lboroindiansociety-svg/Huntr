@@ -1,6 +1,11 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import { execSync } from 'child_process'
+
+function getGitCommit(): string {
+  try { return execSync('git rev-parse --short HEAD').toString().trim() } catch { return 'unknown' }
+}
 import { extractJobDetails } from './parseJobCore'
 import { createServiceSupabase, syncTrackrToSupabase, DEFAULT_TRACKR_FILTERS } from './trackrSyncCore'
 import { syncAllLiveRoles } from './jobBoardSyncCore'
@@ -236,6 +241,9 @@ export default defineConfig(({ mode }) => {
       alias: {
         "@": path.resolve(__dirname, "./src"),
       },
+    },
+    define: {
+      __GIT_COMMIT__: JSON.stringify(getGitCommit()),
     },
     server: Object.keys(serverConfig).length ? serverConfig : undefined,
   }

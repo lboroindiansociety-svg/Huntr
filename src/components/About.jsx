@@ -77,16 +77,13 @@ const STATS = [
   { value: '95%',  label: 'offer rate',      icon: TrendingUp },
 ]
 
-const TEAM = [
-  {
-    name: 'Krishna Raman',
-    role: 'Founder',
-    bio: 'CS & AI student who applied to 100 plus roles and built Huntr so no one else has to manage that chaos in a spreadsheet.',
-    initials: 'KR',
-    social: { linkedin: 'https://www.linkedin.com/in/krishnavraman/', twitter: '#', github: '#' },
-  },
-
-]
+const FOUNDER = {
+  name: 'Krishna Raman',
+  role: 'Founder and sole developer',
+  bio: 'CS and AI student who applied to 100 plus roles and built Huntr so no one else has to manage that chaos in a spreadsheet. Designs it, codes it, ships it.',
+  initials: 'KR',
+  social: { linkedin: 'https://www.linkedin.com/in/krishnavraman/', twitter: '#', github: '#' },
+}
 
 function About({ onBack }) {
   const [isDarkMode, setIsDarkMode] = useState(false)
@@ -116,23 +113,43 @@ function About({ onBack }) {
         <div className="max-w-7xl mx-auto h-full margin-lined-dots" />
       </div>
 
-      {/* Nav */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-14 items-center justify-between">
-            <HuntrLogo size="md" />
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={onBack} className="text-xs uppercase tracking-wide gap-1.5">
-                <ArrowLeft className="h-3.5 w-3.5" />
-                Back
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleDarkMode} aria-label="Toggle theme">
-                {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </Button>
+      {/* Status bar + Nav — sticky as a unit */}
+      <div className="sticky top-0 z-50">
+        {/* Online status bar */}
+        <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex h-7 items-center justify-between">
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">
+                v1.0.0 #{__GIT_COMMIT__}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                </span>
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">online</span>
+              </div>
             </div>
           </div>
         </div>
-      </header>
+        {/* Nav */}
+        <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex h-14 items-center justify-between">
+              <HuntrLogo size="md" />
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={onBack} className="text-xs uppercase tracking-wide gap-1.5">
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  Back
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleDarkMode} aria-label="Toggle theme">
+                  {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </header>
+      </div>
 
       {/* Hero */}
       <section className="relative border-b border-border">
@@ -181,28 +198,29 @@ function About({ onBack }) {
       {/* Story */}
       <section className="py-24 border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-10">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Origin</p>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+              Why we exist_
+            </h2>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
-            <div>
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Origin</p>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-8">
-                Why we exist_
-              </h2>
-              <div className="space-y-5 text-sm text-muted-foreground leading-relaxed">
-                <p>
-                  During my final year of university, I applied to over 100 positions across
-                  internships, graduate schemes, and full-time roles. What started as an exciting
-                  search quickly became a mess of spreadsheets, sticky notes, and missed follow-ups.
-                </p>
-                <p>
-                  I was losing track of where I had applied, when, and what came next. The overhead
-                  of managing the pipeline was eating into time I should have spent preparing for
-                  interviews and writing better cover letters.
-                </p>
-                <p>
-                  So I built this. A focused, no-nonsense tracker that handles the logistics so
-                  you can focus on getting the role.
-                </p>
-              </div>
+            <div className="space-y-5 text-sm text-muted-foreground leading-relaxed">
+              <p>
+                During my final year of university, I applied to over 100 positions across
+                internships, graduate schemes, and full-time roles. What started as an exciting
+                search quickly became a mess of spreadsheets, sticky notes, and missed follow-ups.
+              </p>
+              <p>
+                I was losing track of where I had applied, when, and what came next. The overhead
+                of managing the pipeline was eating into time I should have spent preparing for
+                interviews and writing better cover letters.
+              </p>
+              <p>
+                So I built this. A focused, no-nonsense tracker that handles the logistics so
+                you can focus on getting the role.
+              </p>
             </div>
 
             <div className="border border-border rounded-md p-8 bg-muted/20">
@@ -252,54 +270,45 @@ function About({ onBack }) {
         </div>
       </section>
 
-      {/* Team */}
+      {/* Founder
       <section className="py-24 border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-14">
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">People</p>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-              The team_
+              The person behind it_
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TEAM.map((member) => (
-              <Card key={member.name} className="rounded-md border-border">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4 mb-5">
-                    <div className="h-10 w-10 rounded-md bg-secondary border border-border flex items-center justify-center text-xs font-bold shrink-0">
-                      {member.initials}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold">{member.name}</p>
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">{member.role}</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed mb-5">{member.bio}</p>
-                  <Separator className="mb-4" />
-                  <div className="flex items-center gap-2">
-                    {member.social.linkedin && (
-                      <a href={member.social.linkedin} className="p-1.5 rounded border border-border bg-secondary hover:bg-accent transition-colors">
-                        <Linkedin className="h-3 w-3" />
-                      </a>
-                    )}
-                    {member.social.twitter && (
-                      <a href={member.social.twitter} className="p-1.5 rounded border border-border bg-secondary hover:bg-accent transition-colors">
-                        <Twitter className="h-3 w-3" />
-                      </a>
-                    )}
-                    {member.social.github && (
-                      <a href={member.social.github} className="p-1.5 rounded border border-border bg-secondary hover:bg-accent transition-colors">
-                        <Github className="h-3 w-3" />
-                      </a>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="flex items-start gap-8 max-w-2xl">
+            <div className="h-16 w-16 rounded-md bg-secondary border border-border flex items-center justify-center text-base font-bold shrink-0">
+              {FOUNDER.initials}
+            </div>
+            <div>
+              <p className="text-xl font-bold tracking-tight">{FOUNDER.name}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1 mb-5">{FOUNDER.role}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-6">{FOUNDER.bio}</p>
+              <div className="flex items-center gap-2">
+                {FOUNDER.social.linkedin && (
+                  <a href={FOUNDER.social.linkedin} target="_blank" rel="noreferrer" className="p-1.5 rounded border border-border bg-secondary hover:bg-accent transition-colors">
+                    <Linkedin className="h-3.5 w-3.5" />
+                  </a>
+                )}
+                {FOUNDER.social.twitter && (
+                  <a href={FOUNDER.social.twitter} target="_blank" rel="noreferrer" className="p-1.5 rounded border border-border bg-secondary hover:bg-accent transition-colors">
+                    <Twitter className="h-3.5 w-3.5" />
+                  </a>
+                )}
+                {FOUNDER.social.github && (
+                  <a href={FOUNDER.social.github} target="_blank" rel="noreferrer" className="p-1.5 rounded border border-border bg-secondary hover:bg-accent transition-colors">
+                    <Github className="h-3.5 w-3.5" />
+                  </a>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Contact */}
       <section className="py-24 border-b border-border bg-muted/20">

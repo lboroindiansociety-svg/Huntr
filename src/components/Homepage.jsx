@@ -138,26 +138,46 @@ function Homepage({ onGetStarted, onAbout }) {
         <div className="max-w-7xl mx-auto h-full margin-lined-dots" />
       </div>
 
-      {/* Nav */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-14 items-center justify-between">
-            <HuntrLogo size="md" />
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={onAbout} className="text-xs uppercase tracking-wide">
-                About
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleDarkMode} aria-label="Toggle theme">
-                {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </Button>
-              <Button size="sm" onClick={onGetStarted} className="text-xs uppercase tracking-wide gap-1.5">
-                Get started
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Button>
+      {/* Status bar + Nav — sticky as a unit */}
+      <div className="sticky top-0 z-50">
+        {/* Online status bar */}
+        <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex h-7 items-center justify-between">
+              <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">
+                v1.0.0 #{__GIT_COMMIT__}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                </span>
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">online</span>
+              </div>
             </div>
           </div>
         </div>
-      </header>
+        {/* Nav */}
+        <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex h-14 items-center justify-between">
+              <HuntrLogo size="md" />
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={onAbout} className="text-xs uppercase tracking-wide">
+                  About
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleDarkMode} aria-label="Toggle theme">
+                  {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </Button>
+                <Button size="sm" onClick={onGetStarted} className="text-xs uppercase tracking-wide gap-1.5">
+                  Get started
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </header>
+      </div>
 
       {/* Hero */}
       <section className="relative border-b border-border">
