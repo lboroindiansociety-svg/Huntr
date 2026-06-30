@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Building, Loader2 } from 'lucide-react'
+import { Building } from 'lucide-react'
 import { Input } from './ui/input'
+import { Spinner } from './ui/spinner'
 import { cn } from '../lib/utils'
 import { formatLogoUrl, getLogoUrl, searchCompanies } from '../lib/logoDev'
 
@@ -66,11 +67,16 @@ function CompanyAutocomplete({
     return () => clearTimeout(timer)
   }, [query])
 
+  useEffect(() => {
+    setPreviewError(false)
+  }, [domain])
+
   const select = (company) => {
     skipSearchRef.current = true
     setQuery(company.name)
     setOpen(false)
     setResults([])
+    setPreviewError(false)
     onChange({ name: company.name, domain: company.domain })
   }
 
@@ -140,7 +146,7 @@ function CompanyAutocomplete({
           }
         />
         {loading && (
-          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+          <Spinner className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         )}
       </div>
 
