@@ -8,6 +8,29 @@ export const GRAD_TECH_QUERIES = [
   'graduate software developer',
 ]
 
+/** Boolean keyword queries for Reed (no IT category filter on their API). */
+export const REED_GRAD_TECH_QUERIES = [
+  '(software OR developer OR programmer) AND graduate',
+  'graduate AND (software engineer OR software developer)',
+  '("new grad" OR graduate) AND software',
+  'early careers AND (software OR developer OR programmer)',
+  'graduate AND (frontend OR backend OR fullstack OR devops OR "data engineer")',
+]
+
+const REED_EXCLUDE_TITLE =
+  /\b(electronics|electrical|mechanical|civil|architectural|lighting|structural|manufacturing|hvac|automotive|chemical|biomedical|project design|quantity survey|welding|fabrication|plumbing|surveyor|nurse|nursing|teaching|teacher|care assistant)\b/i
+
+const REED_INCLUDE_TITLE =
+  /\b(software|developer|programmer|devops|dev ops|frontend|front-end|backend|back-end|fullstack|full[- ]stack|web developer|mobile developer|cloud engineer|cybersecurity|cyber security|data engineer|machine learning|ml engineer|ai engineer|platform engineer|site reliability|\bsre\b|\.net developer|java developer|python developer|javascript|typescript|react developer|ios developer|android developer|it graduate|tech graduate|software engineer|software developer|technology|computing|informatics|\bit\b|\btech\b)\b/i
+
+/** Drop Reed roles whose titles are not clearly UK tech grad jobs. */
+export function isRelevantReedTechRole(title: string): boolean {
+  const trimmed = title.trim()
+  if (!trimmed) return false
+  if (REED_EXCLUDE_TITLE.test(trimmed)) return false
+  return REED_INCLUDE_TITLE.test(trimmed)
+}
+
 const ADZUNA_MAX_PAGES = 2
 const ADZUNA_RESULTS_PER_PAGE = 50
 
@@ -141,6 +164,7 @@ function mapAdzunaJob(job: AdzunaJob, query: string): DiscoverRoleRow | null {
 
 function mapReedJob(job: ReedJob, query: string): DiscoverRoleRow | null {
   if (!job.jobUrl || !job.jobTitle) return null
+  if (!isRelevantReedTechRole(job.jobTitle)) return null
   const company = job.employerName?.trim() || 'Unknown'
   return {
     external_id: String(job.jobId),
@@ -245,7 +269,7 @@ export async function syncAdzunaRoles(
 export async function syncReedRoles(supabase: SupabaseClient, apiKey: string) {
   const byKey = new Map<string, DiscoverRoleRow>()
 
-  for (const query of GRAD_TECH_QUERIES) {
+  for (const query of REED_GRAD_TECH_QUERIES) {
     const results = await fetchReedSearch(apiKey, query)
     for (const job of results) {
       const row = mapReedJob(job, query)
