@@ -114,11 +114,12 @@ BEGIN
   END IF;
 END $$;`
 
-  const trackrMigrationSQL = `-- Trackr Discover: programme cache + dedup column
+  const trackrMigrationSQL = `-- Trackr Discover: per-user programme cache + dedup column
 -- Run this if you use the Discover tab to browse Trackr listings
 
 CREATE TABLE IF NOT EXISTS trackr_programmes (
-  trackr_id TEXT PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  trackr_id TEXT NOT NULL,
   name TEXT NOT NULL,
   company_id TEXT,
   company_name TEXT NOT NULL,
@@ -138,14 +139,15 @@ CREATE TABLE IF NOT EXISTS trackr_programmes (
   written_answers TEXT,
   sponsors_visa TEXT,
   raw JSONB,
-  synced_at TIMESTAMPTZ DEFAULT NOW()
+  synced_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (user_id, trackr_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_trackr_programmes_filters
-  ON trackr_programmes (region, industry, season, programme_type);
+CREATE INDEX IF NOT EXISTS idx_trackr_programmes_user_filters
+  ON trackr_programmes (user_id, region, industry, season, programme_type);
 
 CREATE TABLE IF NOT EXISTS trackr_sync_meta (
-  id TEXT PRIMARY KEY DEFAULT 'default',
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   region TEXT,
   industry TEXT,
   season TEXT,
@@ -154,31 +156,14 @@ CREATE TABLE IF NOT EXISTS trackr_sync_meta (
   programme_count INTEGER
 );
 
-INSERT INTO trackr_sync_meta (id) VALUES ('default')
-ON CONFLICT (id) DO NOTHING;
-
 ALTER TABLE trackr_programmes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trackr_sync_meta ENABLE ROW LEVEL SECURITY;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE tablename = 'trackr_programmes' AND policyname = 'Authenticated users can read trackr programmes'
-  ) THEN
-    CREATE POLICY "Authenticated users can read trackr programmes" ON trackr_programmes
-      FOR SELECT USING (auth.role() = 'authenticated');
-  END IF;
-END $$;
+CREATE POLICY "Users manage own trackr programmes" ON trackr_programmes
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE tablename = 'trackr_sync_meta' AND policyname = 'Authenticated users can read trackr sync meta'
-  ) THEN
-    CREATE POLICY "Authenticated users can read trackr sync meta" ON trackr_sync_meta
-      FOR SELECT USING (auth.role() = 'authenticated');
-  END IF;
-END $$;
+CREATE POLICY "Users manage own trackr sync meta" ON trackr_sync_meta
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 DO $$
 BEGIN
@@ -193,10 +178,11 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_internships_trackr_id ON internships (trackr_id)
   WHERE trackr_id IS NOT NULL;`
 
-  const discoverRolesMigrationSQL = `-- Live roles cache (Adzuna + Reed)
+  const discoverRolesMigrationSQL = `-- Live roles cache (Adzuna + Reed, per user)
 -- Run after Trackr migration if using Discover live roles
 
 CREATE TABLE IF NOT EXISTS discover_roles (
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   external_id TEXT NOT NULL,
   source TEXT NOT NULL CHECK (source IN ('adzuna', 'reed')),
   company_name TEXT NOT NULL,
@@ -209,37 +195,71 @@ CREATE TABLE IF NOT EXISTS discover_roles (
   posted_at TIMESTAMPTZ,
   search_query TEXT,
   synced_at TIMESTAMPTZ DEFAULT NOW(),
-  PRIMARY KEY (source, external_id)
+  PRIMARY KEY (user_id, source, external_id)
 );
 
+CREATE INDEX IF NOT EXISTS idx_discover_roles_user_synced
+  ON discover_roles (user_id, synced_at DESC);
+
 CREATE TABLE IF NOT EXISTS discover_roles_sync_meta (
-  source TEXT PRIMARY KEY CHECK (source IN ('adzuna', 'reed')),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  source TEXT NOT NULL CHECK (source IN ('adzuna', 'reed')),
   last_synced_at TIMESTAMPTZ,
-  role_count INTEGER
+  role_count INTEGER,
+  PRIMARY KEY (user_id, source)
 );
 
 ALTER TABLE discover_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE discover_roles_sync_meta ENABLE ROW LEVEL SECURITY;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE tablename = 'discover_roles' AND policyname = 'Authenticated users can read discover roles'
-  ) THEN
-    CREATE POLICY "Authenticated users can read discover roles" ON discover_roles
-      FOR SELECT USING (auth.role() = 'authenticated');
-  END IF;
-END $$;
+CREATE POLICY "Users manage own discover roles" ON discover_roles
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE tablename = 'discover_roles_sync_meta' AND policyname = 'Authenticated users can read discover roles sync meta'
-  ) THEN
-    CREATE POLICY "Authenticated users can read discover roles sync meta" ON discover_roles_sync_meta
-      FOR SELECT USING (auth.role() = 'authenticated');
-  END IF;
-END $$;`
+CREATE POLICY "Users manage own discover roles sync meta" ON discover_roles_sync_meta
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);`
+
+  const discoverPerUserMigrationSQL = `-- Upgrade existing global Discover cache to per-user
+-- Clears shared cache. Run if you already ran the old Trackr/live roles migrations.
+
+DROP POLICY IF EXISTS "Authenticated users can read trackr programmes" ON trackr_programmes;
+DROP POLICY IF EXISTS "Authenticated users can read trackr sync meta" ON trackr_sync_meta;
+DROP POLICY IF EXISTS "Authenticated users can read discover roles" ON discover_roles;
+DROP POLICY IF EXISTS "Authenticated users can read discover roles sync meta" ON discover_roles_sync_meta;
+
+TRUNCATE trackr_programmes, trackr_sync_meta, discover_roles, discover_roles_sync_meta;
+
+ALTER TABLE trackr_programmes DROP CONSTRAINT IF EXISTS trackr_programmes_pkey;
+ALTER TABLE trackr_programmes ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+ALTER TABLE trackr_programmes ALTER COLUMN user_id SET NOT NULL;
+ALTER TABLE trackr_programmes ADD PRIMARY KEY (user_id, trackr_id);
+
+ALTER TABLE trackr_sync_meta DROP CONSTRAINT IF EXISTS trackr_sync_meta_pkey;
+ALTER TABLE trackr_sync_meta DROP COLUMN IF EXISTS id;
+ALTER TABLE trackr_sync_meta ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+ALTER TABLE trackr_sync_meta ALTER COLUMN user_id SET NOT NULL;
+ALTER TABLE trackr_sync_meta ADD PRIMARY KEY (user_id);
+
+ALTER TABLE discover_roles DROP CONSTRAINT IF EXISTS discover_roles_pkey;
+ALTER TABLE discover_roles ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+ALTER TABLE discover_roles ALTER COLUMN user_id SET NOT NULL;
+ALTER TABLE discover_roles ADD PRIMARY KEY (user_id, source, external_id);
+
+ALTER TABLE discover_roles_sync_meta DROP CONSTRAINT IF EXISTS discover_roles_sync_meta_pkey;
+ALTER TABLE discover_roles_sync_meta ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+ALTER TABLE discover_roles_sync_meta ALTER COLUMN user_id SET NOT NULL;
+ALTER TABLE discover_roles_sync_meta ADD PRIMARY KEY (user_id, source);
+
+CREATE POLICY "Users manage own trackr programmes" ON trackr_programmes
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users manage own trackr sync meta" ON trackr_sync_meta
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users manage own discover roles" ON discover_roles
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users manage own discover roles sync meta" ON discover_roles_sync_meta
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);`
 
   const storageSetup = `-- Storage Setup Instructions:
 -- 1. Go to your Supabase Dashboard > Storage
@@ -444,6 +464,39 @@ FOR ALL USING (auth.role() = 'authenticated');`
               </div>
               <textarea
                 value={discoverRolesMigrationSQL}
+                readOnly
+                className="w-full h-40 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg font-mono text-xs text-gray-900 dark:text-gray-100 resize-none"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Per-User Discover Upgrade (if you ran the old global cache migrations)
+                </label>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(discoverPerUserMigrationSQL)
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 2000)
+                  }}
+                  className="flex items-center space-x-1 text-sm text-primary-600 hover:text-primary-700 transition-colors"
+                >
+                  {copied ? (
+                    <>
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      <span>Copy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <textarea
+                value={discoverPerUserMigrationSQL}
                 readOnly
                 className="w-full h-40 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg font-mono text-xs text-gray-900 dark:text-gray-100 resize-none"
               />

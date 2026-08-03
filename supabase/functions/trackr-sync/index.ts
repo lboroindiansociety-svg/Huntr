@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createUserSupabaseClient } from "../_shared/userClient.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,12 +30,13 @@ function extractDomain(url: string | null | undefined): string | null {
   }
 }
 
-function mapProgramme(programme: Record<string, unknown>, filters: TrackrFilters) {
+function mapProgramme(programme: Record<string, unknown>, filters: TrackrFilters, userId: string) {
   const company = (programme.company ?? {}) as Record<string, unknown>;
   const careersSite = (company.careersSite as string | null) ?? null;
   const link = (programme.url as string | null) ?? careersSite;
 
   return {
+    user_id: userId,
     trackr_id: programme.id as string,
     name: programme.name as string,
     company_id: (programme.companyId as string | null) ?? (company.id as string | null) ?? null,
@@ -77,6 +78,15 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const auth = await createUserSupabaseClient(req);
+    if ("error" in auth) {
+      return new Response(JSON.stringify({ error: auth.error }), {
+        status: auth.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { supabase, user } = auth;
     const body = await req.json().catch(() => ({}));
     const filters: TrackrFilters = {
       region: typeof body.region === "string" ? body.region : DEFAULT_FILTERS.region,
@@ -108,59 +118,63 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !serviceRoleKey) {
-      return new Response(JSON.stringify({ error: "Supabase service role not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-
     const rows = programmes
       .filter((p: Record<string, unknown>) => isActiveProgramme(p))
-      .map((p: Record<string, unknown>) => mapProgramme(p, filters));
+      .map((p: Record<string, unknown>) => mapProgramme(p, filters, user.id));
 
-    const { error: deleteError } = await supabase
-      .from("trackr_programmes")
-      .delete()
-      .eq("region", filters.region)
-      .eq("industry", filters.industry)
-      .eq("season", filters.season)
-      .eq("programme_type", filters.type);
-    if (deleteError) {
-      return new Response(JSON.stringify({ error: deleteError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    let added = 0;
     if (rows.length > 0) {
-      const { error } = await supabase.from("trackr_programmes").upsert(rows, {
-        onConflict: "trackr_id",
-      });
-      if (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
+      const { data: existing, error: existingError } = await supabase
+        .from("trackr_programmes")
+        .select("trackr_id")
+        .eq("user_id", user.id);
+      if (existingError) {
+        return new Response(JSON.stringify({ error: existingError.message }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      const existingIds = new Set((existing || []).map((row) => row.trackr_id));
+      const newRows = rows.filter((row) => !existingIds.has(row.trackr_id));
+      added = newRows.length;
+
+      if (newRows.length > 0) {
+        const { error } = await supabase.from("trackr_programmes").insert(newRows);
+        if (error) {
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+    }
+
+    const { count, error: countError } = await supabase
+      .from("trackr_programmes")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("region", filters.region)
+      .eq("industry", filters.industry)
+      .eq("season", filters.season)
+      .eq("programme_type", filters.type);
+    if (countError) {
+      return new Response(JSON.stringify({ error: countError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const lastSyncedAt = new Date().toISOString();
     const { error: metaError } = await supabase.from("trackr_sync_meta").upsert({
-      id: "default",
+      user_id: user.id,
       region: filters.region,
       industry: filters.industry,
       season: filters.season,
       programme_type: filters.type,
       last_synced_at: lastSyncedAt,
-      programme_count: rows.length,
-    });
+      programme_count: count ?? 0,
+    }, { onConflict: "user_id" });
     if (metaError) {
       return new Response(JSON.stringify({ error: metaError.message }), {
         status: 500,
@@ -168,7 +182,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ synced: rows.length, lastSyncedAt }), {
+    return new Response(JSON.stringify({
+      synced: rows.length,
+      added,
+      total: count ?? 0,
+      lastSyncedAt,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

@@ -102,45 +102,59 @@ export async function fetchTrackrProgrammes(filters: TrackrFilters): Promise<Tra
 export async function syncTrackrToSupabase(
   supabase: SupabaseClient,
   filters: TrackrFilters,
+  userId: string,
 ) {
   const programmes = await fetchTrackrProgrammes(filters)
   const rows = programmes
     .filter(isActiveTrackrProgramme)
-    .map(p => mapProgramme(p, filters))
+    .map(p => ({ ...mapProgramme(p, filters), user_id: userId }))
 
-  const { error: deleteError } = await supabase
+  let added = 0
+  if (rows.length > 0) {
+    const { data: existing, error: existingError } = await supabase
+      .from('trackr_programmes')
+      .select('trackr_id')
+      .eq('user_id', userId)
+    if (existingError) throw new Error(existingError.message)
+
+    const existingIds = new Set((existing || []).map(row => row.trackr_id))
+    const newRows = rows.filter(row => !existingIds.has(row.trackr_id))
+    added = newRows.length
+
+    if (newRows.length > 0) {
+      const { error } = await supabase.from('trackr_programmes').insert(newRows)
+      if (error) throw new Error(error.message)
+    }
+  }
+
+  const { count, error: countError } = await supabase
     .from('trackr_programmes')
-    .delete()
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
     .eq('region', filters.region)
     .eq('industry', filters.industry)
     .eq('season', filters.season)
     .eq('programme_type', filters.type)
-  if (deleteError) throw new Error(deleteError.message)
-
-  if (rows.length > 0) {
-    const { error } = await supabase.from('trackr_programmes').upsert(rows, {
-      onConflict: 'trackr_id',
-    })
-    if (error) throw new Error(error.message)
-  }
+  if (countError) throw new Error(countError.message)
 
   const lastSyncedAt = new Date().toISOString()
   const { error: metaError } = await supabase.from('trackr_sync_meta').upsert({
-    id: 'default',
+    user_id: userId,
     region: filters.region,
     industry: filters.industry,
     season: filters.season,
     programme_type: filters.type,
     last_synced_at: lastSyncedAt,
-    programme_count: rows.length,
-  })
+    programme_count: count ?? 0,
+  }, { onConflict: 'user_id' })
   if (metaError) throw new Error(metaError.message)
 
-  return { synced: rows.length, lastSyncedAt }
+  return { synced: rows.length, added, total: count ?? 0, lastSyncedAt }
 }
 
-export function createServiceSupabase(url: string, serviceRoleKey: string) {
-  return createClient(url, serviceRoleKey, {
+export function createUserSupabase(url: string, anonKey: string, authHeader: string) {
+  return createClient(url, anonKey, {
+    global: { headers: { Authorization: authHeader } },
     auth: { persistSession: false, autoRefreshToken: false },
   })
 }

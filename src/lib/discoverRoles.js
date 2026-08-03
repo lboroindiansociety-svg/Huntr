@@ -1,10 +1,30 @@
 import { supabase } from './supabase'
 
+async function getSyncAuthHeaders() {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) {
+    throw new Error('Sign in to refresh listings')
+  }
+
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+  if (!anonKey) {
+    throw new Error('Supabase is not configured')
+  }
+
+  return {
+    Authorization: `Bearer ${session.access_token}`,
+    apikey: anonKey,
+    'Content-Type': 'application/json',
+  }
+}
+
 export async function syncLiveRoles() {
+  const headers = await getSyncAuthHeaders()
+
   if (import.meta.env.DEV) {
     const res = await fetch('/api/live-roles-sync', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({}),
     })
     const data = await res.json()
@@ -13,18 +33,13 @@ export async function syncLiveRoles() {
   }
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-  if (!supabaseUrl || !anonKey) {
+  if (!supabaseUrl) {
     throw new Error('Supabase is not configured')
   }
 
   const res = await fetch(`${supabaseUrl}/functions/v1/live-roles-sync`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${anonKey}`,
-      apikey: anonKey,
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify({}),
   })
 

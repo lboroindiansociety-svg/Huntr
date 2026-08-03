@@ -7,7 +7,7 @@ function getGitCommit(): string {
   try { return execSync('git rev-parse --short HEAD').toString().trim() } catch { return 'unknown' }
 }
 import { extractJobDetails } from './parseJobCore'
-import { createServiceSupabase, syncTrackrToSupabase, DEFAULT_TRACKR_FILTERS } from './trackrSyncCore'
+import { createUserSupabase, syncTrackrToSupabase, DEFAULT_TRACKR_FILTERS } from './trackrSyncCore'
 import { syncAllLiveRoles } from './jobBoardSyncCore'
 
 function readRequestBody(req: import('http').IncomingMessage): Promise<string> {
@@ -19,9 +19,24 @@ function readRequestBody(req: import('http').IncomingMessage): Promise<string> {
   })
 }
 
+async function resolveDevUser(req: import('http').IncomingMessage, supabaseUrl: string, anonKey: string) {
+  const authHeader = req.headers.authorization
+  if (!authHeader?.startsWith('Bearer ')) {
+    throw new Error('Sign in to sync listings')
+  }
+
+  const supabase = createUserSupabase(supabaseUrl, anonKey, authHeader)
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) {
+    throw new Error('Sign in to sync listings')
+  }
+
+  return { supabase, user }
+}
+
 function liveRolesSyncDevPlugin(
   supabaseUrl: string | undefined,
-  serviceRoleKey: string | undefined,
+  anonKey: string | undefined,
   adzunaAppId: string | undefined,
   adzunaAppKey: string | undefined,
   reedApiKey: string | undefined,
@@ -33,7 +48,7 @@ function liveRolesSyncDevPlugin(
         if (req.method === 'OPTIONS') {
           res.setHeader('Access-Control-Allow-Origin', '*')
           res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-          res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+          res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
           res.statusCode = 204
           res.end()
           return
@@ -44,11 +59,11 @@ function liveRolesSyncDevPlugin(
           return
         }
 
-        if (!supabaseUrl || !serviceRoleKey) {
+        if (!supabaseUrl || !anonKey) {
           res.statusCode = 500
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({
-            error: 'Set VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env for live roles sync in dev',
+            error: 'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env for live roles sync in dev',
           }))
           return
         }
@@ -68,13 +83,13 @@ function liveRolesSyncDevPlugin(
         }
 
         try {
-          const supabase = createServiceSupabase(supabaseUrl, serviceRoleKey)
-          const result = await syncAllLiveRoles(supabase, adzunaAppId, adzunaAppKey, reedApiKey)
+          const { supabase, user } = await resolveDevUser(req, supabaseUrl, anonKey)
+          const result = await syncAllLiveRoles(supabase, adzunaAppId, adzunaAppKey, reedApiKey, user.id)
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify(result))
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Failed to sync live roles'
-          res.statusCode = 500
+          res.statusCode = message.includes('Sign in') ? 401 : 500
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ error: message }))
         }
@@ -83,7 +98,7 @@ function liveRolesSyncDevPlugin(
   }
 }
 
-function trackrSyncDevPlugin(supabaseUrl: string | undefined, serviceRoleKey: string | undefined) {
+function trackrSyncDevPlugin(supabaseUrl: string | undefined, anonKey: string | undefined) {
   return {
     name: 'trackr-sync-dev',
     configureServer(server: import('vite').ViteDevServer) {
@@ -91,7 +106,7 @@ function trackrSyncDevPlugin(supabaseUrl: string | undefined, serviceRoleKey: st
         if (req.method === 'OPTIONS') {
           res.setHeader('Access-Control-Allow-Origin', '*')
           res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-          res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+          res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
           res.statusCode = 204
           res.end()
           return
@@ -102,16 +117,17 @@ function trackrSyncDevPlugin(supabaseUrl: string | undefined, serviceRoleKey: st
           return
         }
 
-        if (!supabaseUrl || !serviceRoleKey) {
+        if (!supabaseUrl || !anonKey) {
           res.statusCode = 500
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({
-            error: 'Set VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env for Trackr sync in dev',
+            error: 'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env for Trackr sync in dev',
           }))
           return
         }
 
         try {
+          const { supabase, user } = await resolveDevUser(req, supabaseUrl, anonKey)
           const raw = await readRequestBody(req)
           const body = JSON.parse(raw || '{}')
           const filters = {
@@ -121,13 +137,12 @@ function trackrSyncDevPlugin(supabaseUrl: string | undefined, serviceRoleKey: st
             type: typeof body.type === 'string' ? body.type : DEFAULT_TRACKR_FILTERS.type,
           }
 
-          const supabase = createServiceSupabase(supabaseUrl, serviceRoleKey)
-          const result = await syncTrackrToSupabase(supabase, filters)
+          const result = await syncTrackrToSupabase(supabase, filters, user.id)
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify(result))
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Failed to sync Trackr programmes'
-          res.statusCode = 500
+          res.statusCode = message.includes('Sign in') ? 401 : 500
           res.setHeader('Content-Type', 'application/json')
           res.end(JSON.stringify({ error: message }))
         }
@@ -228,10 +243,10 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       parseJobUrlDevPlugin(env.GEMINI_API_KEY, env.JINA_API_KEY),
-      trackrSyncDevPlugin(env.VITE_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY),
+      trackrSyncDevPlugin(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY),
       liveRolesSyncDevPlugin(
         env.VITE_SUPABASE_URL,
-        env.SUPABASE_SERVICE_ROLE_KEY,
+        env.VITE_SUPABASE_ANON_KEY,
         env.ADZUNA_APP_ID,
         env.ADZUNA_APP_KEY,
         env.REED_API_KEY,

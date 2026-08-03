@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createUserSupabaseClient } from "../_shared/userClient.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,15 +39,6 @@ function isRelevantReedTechRole(title: string): boolean {
 
 const ADZUNA_MAX_PAGES = 2;
 const ADZUNA_RESULTS_PER_PAGE = 50;
-
-function extractDomain(url: string | null | undefined): string | null {
-  if (!url) return null;
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return null;
-  }
-}
 
 function parsePostedDate(value: string | null | undefined): string | null {
   if (!value?.trim()) return null;
@@ -95,13 +87,14 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function mapAdzunaJob(job: Record<string, unknown>, query: string) {
+function mapAdzunaJob(job: Record<string, unknown>, query: string, userId: string) {
   const redirectUrl = job.redirect_url as string | undefined;
   const title = job.title as string | undefined;
   if (!redirectUrl || !title) return null;
   const company = job.company as Record<string, unknown> | undefined;
   const location = job.location as Record<string, unknown> | undefined;
   return {
+    user_id: userId,
     external_id: String(job.id),
     source: "adzuna",
     company_name: (company?.display_name as string)?.trim() || "Unknown",
@@ -117,7 +110,7 @@ function mapAdzunaJob(job: Record<string, unknown>, query: string) {
   };
 }
 
-function mapReedJob(job: Record<string, unknown>, query: string) {
+function mapReedJob(job: Record<string, unknown>, query: string, userId: string) {
   const jobUrl = job.jobUrl as string | undefined;
   const jobTitle = job.jobTitle as string | undefined;
   if (!jobUrl || !jobTitle) return null;
@@ -126,6 +119,7 @@ function mapReedJob(job: Record<string, unknown>, query: string) {
     .replace(/<[^>]+>/g, " ")
     .slice(0, 500);
   return {
+    user_id: userId,
     external_id: String(job.jobId),
     source: "reed",
     company_name: ((job.employerName as string) ?? "Unknown").trim(),
@@ -179,10 +173,56 @@ async function fetchReedSearch(apiKey: string, query: string) {
   return Array.isArray(data?.results) ? data.results : [];
 }
 
+async function appendRolesForSource(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  source: "adzuna" | "reed",
+  rows: Record<string, unknown>[],
+) {
+  let added = 0;
+
+  if (rows.length > 0) {
+    const { data: existing, error: existingError } = await supabase
+      .from("discover_roles")
+      .select("external_id")
+      .eq("user_id", userId)
+      .eq("source", source);
+    if (existingError) throw new Error(existingError.message);
+
+    const existingIds = new Set((existing || []).map((row) => row.external_id));
+    const newRows = rows.filter((row) => !existingIds.has(row.external_id as string));
+    added = newRows.length;
+
+    if (newRows.length > 0) {
+      const { error } = await supabase.from("discover_roles").insert(newRows);
+      if (error) throw new Error(error.message);
+    }
+  }
+
+  const { count, error: countError } = await supabase
+    .from("discover_roles")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("source", source);
+  if (countError) throw new Error(countError.message);
+
+  const lastSyncedAt = new Date().toISOString();
+  const { error: metaError } = await supabase.from("discover_roles_sync_meta").upsert({
+    user_id: userId,
+    source,
+    last_synced_at: lastSyncedAt,
+    role_count: count ?? 0,
+  }, { onConflict: "user_id,source" });
+  if (metaError) throw new Error(metaError.message);
+
+  return { synced: rows.length, added, total: count ?? 0, lastSyncedAt };
+}
+
 async function syncAdzuna(
   supabase: ReturnType<typeof createClient>,
   appId: string,
   appKey: string,
+  userId: string,
 ) {
   const byKey = new Map<string, Record<string, unknown>>();
 
@@ -191,7 +231,7 @@ async function syncAdzuna(
       const results = await fetchAdzunaPage(appId, appKey, query, page);
       if (results.length === 0) break;
       for (const job of results) {
-        const row = mapAdzunaJob(job, query);
+        const row = mapAdzunaJob(job, query, userId);
         if (row) byKey.set(`${row.source}:${row.external_id}`, row);
       }
       if (results.length < ADZUNA_RESULTS_PER_PAGE) break;
@@ -199,71 +239,26 @@ async function syncAdzuna(
     await sleep(250);
   }
 
-  const rows = [...byKey.values()];
-  const lastSyncedAt = new Date().toISOString();
-
-  const { error: deleteError } = await supabase
-    .from("discover_roles")
-    .delete()
-    .eq("source", "adzuna");
-  if (deleteError) throw new Error(deleteError.message);
-
-  if (rows.length > 0) {
-    const { error } = await supabase.from("discover_roles").upsert(rows, {
-      onConflict: "source,external_id",
-    });
-    if (error) throw new Error(error.message);
-  }
-
-  const { error: metaError } = await supabase.from("discover_roles_sync_meta").upsert({
-    source: "adzuna",
-    last_synced_at: lastSyncedAt,
-    role_count: rows.length,
-  });
-  if (metaError) throw new Error(metaError.message);
-
-  return { synced: rows.length, lastSyncedAt };
+  return appendRolesForSource(supabase, userId, "adzuna", [...byKey.values()]);
 }
 
 async function syncReed(
   supabase: ReturnType<typeof createClient>,
   apiKey: string,
+  userId: string,
 ) {
   const byKey = new Map<string, Record<string, unknown>>();
 
   for (const query of REED_GRAD_TECH_QUERIES) {
     const results = await fetchReedSearch(apiKey, query);
     for (const job of results) {
-      const row = mapReedJob(job, query);
+      const row = mapReedJob(job, query, userId);
       if (row) byKey.set(`${row.source}:${row.external_id}`, row);
     }
     await sleep(250);
   }
 
-  const rows = [...byKey.values()];
-  const lastSyncedAt = new Date().toISOString();
-
-  const { error: deleteError } = await supabase
-    .from("discover_roles")
-    .delete()
-    .eq("source", "reed");
-  if (deleteError) throw new Error(deleteError.message);
-
-  if (rows.length > 0) {
-    const { error } = await supabase.from("discover_roles").upsert(rows, {
-      onConflict: "source,external_id",
-    });
-    if (error) throw new Error(error.message);
-  }
-
-  const { error: metaError } = await supabase.from("discover_roles_sync_meta").upsert({
-    source: "reed",
-    last_synced_at: lastSyncedAt,
-    role_count: rows.length,
-  });
-  if (metaError) throw new Error(metaError.message);
-
-  return { synced: rows.length, lastSyncedAt };
+  return appendRolesForSource(supabase, userId, "reed", [...byKey.values()]);
 }
 
 Deno.serve(async (req) => {
@@ -279,6 +274,14 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const auth = await createUserSupabaseClient(req);
+    if ("error" in auth) {
+      return new Response(JSON.stringify({ error: auth.error }), {
+        status: auth.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const adzunaAppId = Deno.env.get("ADZUNA_APP_ID");
     const adzunaAppKey = Deno.env.get("ADZUNA_APP_KEY");
     const reedApiKey = Deno.env.get("REED_API_KEY");
@@ -296,21 +299,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !serviceRoleKey) {
-      return new Response(JSON.stringify({ error: "Supabase service role not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-
-    const adzuna = await syncAdzuna(supabase, adzunaAppId, adzunaAppKey);
-    const reed = await syncReed(supabase, reedApiKey);
+    const { supabase, user } = auth;
+    const adzuna = await syncAdzuna(supabase, adzunaAppId, adzunaAppKey, user.id);
+    const reed = await syncReed(supabase, reedApiKey, user.id);
 
     return new Response(JSON.stringify({ adzuna, reed }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

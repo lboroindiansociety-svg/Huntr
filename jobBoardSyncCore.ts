@@ -220,10 +220,57 @@ async function fetchReedSearch(apiKey: string, query: string): Promise<ReedJob[]
   return Array.isArray(data.results) ? data.results : []
 }
 
+async function appendDiscoverRoles(
+  supabase: SupabaseClient,
+  userId: string,
+  source: 'adzuna' | 'reed',
+  rows: DiscoverRoleRow[],
+) {
+  const withUser = rows.map(row => ({ ...row, user_id: userId }))
+  let added = 0
+
+  if (withUser.length > 0) {
+    const { data: existing, error: existingError } = await supabase
+      .from('discover_roles')
+      .select('external_id')
+      .eq('user_id', userId)
+      .eq('source', source)
+    if (existingError) throw new Error(existingError.message)
+
+    const existingIds = new Set((existing || []).map(row => row.external_id))
+    const newRows = withUser.filter(row => !existingIds.has(row.external_id))
+    added = newRows.length
+
+    if (newRows.length > 0) {
+      const { error } = await supabase.from('discover_roles').insert(newRows)
+      if (error) throw new Error(error.message)
+    }
+  }
+
+  const { count, error: countError } = await supabase
+    .from('discover_roles')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('source', source)
+  if (countError) throw new Error(countError.message)
+
+  const lastSyncedAt = new Date().toISOString()
+  const { error: metaError } = await supabase.from('discover_roles_sync_meta').upsert({
+    user_id: userId,
+    source,
+    last_synced_at: lastSyncedAt,
+    role_count: count ?? 0,
+  }, { onConflict: 'user_id,source' })
+  if (metaError) throw new Error(metaError.message)
+
+  return { synced: withUser.length, added, total: count ?? 0, lastSyncedAt }
+}
+
 export async function syncAdzunaRoles(
   supabase: SupabaseClient,
   appId: string,
   appKey: string,
+  userId: string,
 ) {
   const byKey = new Map<string, DiscoverRoleRow>()
 
@@ -240,33 +287,14 @@ export async function syncAdzunaRoles(
     await sleep(250)
   }
 
-  const rows = [...byKey.values()]
-  const lastSyncedAt = new Date().toISOString()
-
-  const { error: deleteError } = await supabase
-    .from('discover_roles')
-    .delete()
-    .eq('source', 'adzuna')
-  if (deleteError) throw new Error(deleteError.message)
-
-  if (rows.length > 0) {
-    const { error } = await supabase.from('discover_roles').upsert(rows, {
-      onConflict: 'source,external_id',
-    })
-    if (error) throw new Error(error.message)
-  }
-
-  const { error: metaError } = await supabase.from('discover_roles_sync_meta').upsert({
-    source: 'adzuna',
-    last_synced_at: lastSyncedAt,
-    role_count: rows.length,
-  })
-  if (metaError) throw new Error(metaError.message)
-
-  return { synced: rows.length, lastSyncedAt }
+  return appendDiscoverRoles(supabase, userId, 'adzuna', [...byKey.values()])
 }
 
-export async function syncReedRoles(supabase: SupabaseClient, apiKey: string) {
+export async function syncReedRoles(
+  supabase: SupabaseClient,
+  apiKey: string,
+  userId: string,
+) {
   const byKey = new Map<string, DiscoverRoleRow>()
 
   for (const query of REED_GRAD_TECH_QUERIES) {
@@ -278,30 +306,7 @@ export async function syncReedRoles(supabase: SupabaseClient, apiKey: string) {
     await sleep(250)
   }
 
-  const rows = [...byKey.values()]
-  const lastSyncedAt = new Date().toISOString()
-
-  const { error: deleteError } = await supabase
-    .from('discover_roles')
-    .delete()
-    .eq('source', 'reed')
-  if (deleteError) throw new Error(deleteError.message)
-
-  if (rows.length > 0) {
-    const { error } = await supabase.from('discover_roles').upsert(rows, {
-      onConflict: 'source,external_id',
-    })
-    if (error) throw new Error(error.message)
-  }
-
-  const { error: metaError } = await supabase.from('discover_roles_sync_meta').upsert({
-    source: 'reed',
-    last_synced_at: lastSyncedAt,
-    role_count: rows.length,
-  })
-  if (metaError) throw new Error(metaError.message)
-
-  return { synced: rows.length, lastSyncedAt }
+  return appendDiscoverRoles(supabase, userId, 'reed', [...byKey.values()])
 }
 
 export async function syncAllLiveRoles(
@@ -309,14 +314,16 @@ export async function syncAllLiveRoles(
   appId: string,
   appKey: string,
   reedApiKey: string,
+  userId: string,
 ) {
-  const adzuna = await syncAdzunaRoles(supabase, appId, appKey)
-  const reed = await syncReedRoles(supabase, reedApiKey)
+  const adzuna = await syncAdzunaRoles(supabase, appId, appKey, userId)
+  const reed = await syncReedRoles(supabase, reedApiKey, userId)
   return { adzuna, reed }
 }
 
-export function createServiceSupabase(url: string, serviceRoleKey: string) {
-  return createClient(url, serviceRoleKey, {
+export function createUserSupabase(url: string, anonKey: string, authHeader: string) {
+  return createClient(url, anonKey, {
+    global: { headers: { Authorization: authHeader } },
     auth: { persistSession: false, autoRefreshToken: false },
   })
 }

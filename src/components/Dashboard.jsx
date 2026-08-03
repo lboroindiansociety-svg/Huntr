@@ -517,8 +517,8 @@ function Dashboard({ user }) {
       onDelete: deleteInternship,
       onMarkAsApplied: markAsApplied,
       dragMode,
-      onAdd: () => setShowAdd(true),
-      onImport: () => setShowImport(true),
+      onAdd: () => setShowAddModal(true),
+      onImport: () => setShowImportModal(true),
       ...roundHandlers,
     }
     if (dragMode) {
@@ -542,7 +542,7 @@ function Dashboard({ user }) {
     <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-6">
         {/* Analytics + pipeline intel */}
-        <Analytics internships={internships} onAdd={() => setShowAdd(true)} onImport={() => setShowImport(true)} />
+        <Analytics internships={internships} onAdd={() => setShowAddModal(true)} onImport={() => setShowImportModal(true)} />
       </div>
 
       <Separator className="w-full" />

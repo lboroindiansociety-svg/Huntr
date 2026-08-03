@@ -103,7 +103,13 @@ function TrackrDiscover({ internships, onSaveProgramme, onError }) {
     try {
       const result = await syncTrackrProgrammes(filters)
       await loadCached()
-      onError?.(`Synced ${result.synced} open programmes from Trackr`, 'success')
+      const added = result.added ?? 0
+      onError?.(
+        added > 0
+          ? `Added ${added} new programme${added !== 1 ? 's' : ''} from Trackr`
+          : 'No new programmes — your list is up to date',
+        'success',
+      )
     } catch (err) {
       onError?.(err.message || 'Failed to sync from Trackr', 'error')
     } finally {
@@ -116,8 +122,13 @@ function TrackrDiscover({ internships, onSaveProgramme, onError }) {
     try {
       const result = await syncLiveRoles()
       await loadCached()
+      const adzunaAdded = result.adzuna?.added ?? 0
+      const reedAdded = result.reed?.added ?? 0
+      const totalAdded = adzunaAdded + reedAdded
       onError?.(
-        `Synced ${result.adzuna?.synced ?? 0} Adzuna + ${result.reed?.synced ?? 0} Reed roles`,
+        totalAdded > 0
+          ? `Added ${adzunaAdded} Adzuna + ${reedAdded} Reed role${totalAdded !== 1 ? 's' : ''}`
+          : 'No new live roles — your list is up to date',
         'success',
       )
     } catch (err) {

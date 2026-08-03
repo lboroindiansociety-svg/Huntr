@@ -20,13 +20,32 @@ function normalizeFilters(filters = DEFAULT_TRACKR_FILTERS) {
   }
 }
 
+async function getSyncAuthHeaders() {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) {
+    throw new Error('Sign in to refresh listings')
+  }
+
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+  if (!anonKey) {
+    throw new Error('Supabase is not configured')
+  }
+
+  return {
+    Authorization: `Bearer ${session.access_token}`,
+    apikey: anonKey,
+    'Content-Type': 'application/json',
+  }
+}
+
 export async function syncTrackrProgrammes(filters = DEFAULT_TRACKR_FILTERS) {
   const body = normalizeFilters(filters)
+  const headers = await getSyncAuthHeaders()
 
   if (import.meta.env.DEV) {
     const res = await fetch('/api/trackr-sync', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(body),
     })
     const data = await res.json()
@@ -35,18 +54,13 @@ export async function syncTrackrProgrammes(filters = DEFAULT_TRACKR_FILTERS) {
   }
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-  if (!supabaseUrl || !anonKey) {
+  if (!supabaseUrl) {
     throw new Error('Supabase is not configured')
   }
 
   const res = await fetch(`${supabaseUrl}/functions/v1/trackr-sync`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${anonKey}`,
-      apikey: anonKey,
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify(body),
   })
 
@@ -81,7 +95,6 @@ export async function fetchSyncMeta() {
   const { data, error } = await supabase
     .from('trackr_sync_meta')
     .select('*')
-    .eq('id', 'default')
     .maybeSingle()
 
   if (error) throw new Error(error.message)

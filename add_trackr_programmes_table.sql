@@ -1,8 +1,9 @@
--- Trackr programme cache + sync metadata
+-- Trackr programme cache (per user) + sync metadata
 -- Run in Supabase Dashboard → SQL Editor
 
 CREATE TABLE IF NOT EXISTS trackr_programmes (
-  trackr_id TEXT PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  trackr_id TEXT NOT NULL,
   name TEXT NOT NULL,
   company_id TEXT,
   company_name TEXT NOT NULL,
@@ -22,14 +23,15 @@ CREATE TABLE IF NOT EXISTS trackr_programmes (
   written_answers TEXT,
   sponsors_visa TEXT,
   raw JSONB,
-  synced_at TIMESTAMPTZ DEFAULT NOW()
+  synced_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (user_id, trackr_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_trackr_programmes_filters
-  ON trackr_programmes (region, industry, season, programme_type);
+CREATE INDEX IF NOT EXISTS idx_trackr_programmes_user_filters
+  ON trackr_programmes (user_id, region, industry, season, programme_type);
 
 CREATE TABLE IF NOT EXISTS trackr_sync_meta (
-  id TEXT PRIMARY KEY DEFAULT 'default',
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   region TEXT,
   industry TEXT,
   season TEXT,
@@ -38,17 +40,14 @@ CREATE TABLE IF NOT EXISTS trackr_sync_meta (
   programme_count INTEGER
 );
 
-INSERT INTO trackr_sync_meta (id) VALUES ('default')
-ON CONFLICT (id) DO NOTHING;
-
 ALTER TABLE trackr_programmes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trackr_sync_meta ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Authenticated users can read trackr programmes" ON trackr_programmes
-  FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Users manage own trackr programmes" ON trackr_programmes
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Authenticated users can read trackr sync meta" ON trackr_sync_meta
-  FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Users manage own trackr sync meta" ON trackr_sync_meta
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- Optional dedup column on user internships
 DO $$

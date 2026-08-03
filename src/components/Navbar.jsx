@@ -59,7 +59,7 @@ function Navbar({ user }) {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex h-7 items-center justify-between">
               <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">
-                v1.0 #{__GIT_COMMIT__}
+                v1.0.0 #{__GIT_COMMIT__}
               </span>
               <div className="flex items-center gap-2">
                 <span className="relative flex h-1.5 w-1.5">
