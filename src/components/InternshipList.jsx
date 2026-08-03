@@ -114,24 +114,32 @@ function InternshipList({
                     <CompanyLogo
                       domain={internship.company_domain}
                       name={internship.company_name}
-                      size={48}
+                      size={56}
                     />
                     <div className="flex-1 min-w-0 flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <h3 className="font-semibold text-base truncate">{internship.company_name}</h3>
-                        <p className="text-sm text-muted-foreground truncate mt-0.5">{internship.role}</p>
+                        <p className="text-sm text-muted-foreground break-words mt-0.5">{internship.role}</p>
                       </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
-                        <Badge variant={STATUS_VARIANT[internship.status] || 'outline'} className="capitalize text-[11px]">
-                          {internship.status}
-                        </Badge>
-                        {internship.location && (
-                          <Badge variant={LOCATION_VARIANT[internship.location] || 'outline'} className="capitalize text-[11px]">
-                            {internship.location}
+                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                          <Badge variant={STATUS_VARIANT[internship.status] || 'outline'} className="capitalize text-[11px]">
+                            {internship.status}
                           </Badge>
-                        )}
-                        {internship.status === 'saved' && internship.priority && (
-                          <Badge variant="outline" className="text-[11px] capitalize">{internship.priority} priority</Badge>
+                          {internship.location && (
+                            <Badge variant={LOCATION_VARIANT[internship.location] || 'outline'} className="capitalize text-[11px]">
+                              {internship.location}
+                            </Badge>
+                          )}
+                          {internship.status === 'saved' && internship.priority && (
+                            <Badge variant="outline" className="text-[11px] capitalize">{internship.priority} priority</Badge>
+                          )}
+                        </div>
+                        {internship.applied_date && (
+                          <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <Calendar className="h-4 w-4 shrink-0" />
+                            {formatDate(internship.applied_date)}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -140,28 +148,23 @@ function InternshipList({
                   {/* Body — grows to fill card height */}
                   <div className="flex flex-col flex-1 gap-4 mt-4 min-h-0">
                   {hasMetaDetails(internship) && (
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-muted-foreground">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-muted-foreground">
                       {internship.location_place && (
                         <span className="flex items-center gap-1.5">
-                          <MapPin className="h-3.5 w-3.5 shrink-0" />
+                          <MapPin className="h-4 w-4 shrink-0" />
                           <span className="truncate">{internship.location_place}</span>
                         </span>
                       )}
-                      {internship.applied_date && (
-                        <span className="flex items-center gap-1.5">
-                          <Calendar className="h-3.5 w-3.5 shrink-0" />
-                          {formatDate(internship.applied_date)}
-                        </span>
-                      )}
+
                       {internship.salary && (
                         <span className="flex items-center gap-1.5">
-                          <DollarSign className="h-3.5 w-3.5 shrink-0" />
+                          <DollarSign className="h-4 w-4 shrink-0" />
                           <span className="truncate">{internship.salary}</span>
                         </span>
                       )}
                       {dl && (
                         <span className={cn('flex items-center gap-1.5 font-medium', dl.cls)}>
-                          <Clock className="h-3.5 w-3.5 shrink-0" />
+                          <Clock className="h-4 w-4 shrink-0" />
                           {dl.text}
                         </span>
                       )}
